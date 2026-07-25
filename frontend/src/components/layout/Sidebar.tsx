@@ -2,8 +2,8 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
-import { useQuery } from '@tanstack/react-query'
+import { usePathname, useRouter } from 'next/navigation'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import axios from 'axios'
 import { supabase } from '@/lib/supabase'
 import { NewChatModal } from '../chat/NewChatModal'
@@ -16,7 +16,10 @@ type Chat = {
 
 export function Sidebar() {
   const pathname = usePathname()
+  const router = useRouter()
+  const queryClient = useQueryClient()
   const [isNewChatModalOpen, setIsNewChatModalOpen] = useState(false)
+  const [deletingChatId, setDeletingChatId] = useState<string | null>(null)
 
   const { data: chats, isLoading, refetch } = useQuery({
     queryKey: ['chats'],
@@ -30,6 +33,38 @@ export function Sidebar() {
       return res.data as Chat[]
     }
   })
+
+  const deleteMutation = useMutation({
+    mutationFn: async (chatId: string) => {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) throw new Error('No session')
+
+      await axios.delete(`http://localhost:8000/api/v1/chats/${chatId}`, {
+        headers: { Authorization: `Bearer ${session.access_token}` }
+      })
+      return chatId
+    },
+    onSuccess: (deletedChatId) => {
+      queryClient.invalidateQueries({ queryKey: ['chats'] })
+      setDeletingChatId(null)
+      if (pathname === `/dashboard/chat/${deletedChatId}`) {
+        router.push('/dashboard')
+      }
+    },
+    onError: (err) => {
+      console.error('Failed to delete chat:', err)
+      setDeletingChatId(null)
+    }
+  })
+
+  const handleDeleteChat = (e: React.MouseEvent, chatId: string) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (confirm('Are you sure you want to delete this chat session?')) {
+      setDeletingChatId(chatId)
+      deleteMutation.mutate(chatId)
+    }
+  }
 
   const handleLogout = async () => {
     await supabase.auth.signOut()
@@ -76,21 +111,36 @@ export function Sidebar() {
           ) : (
             chats?.map((chat) => {
               const isActive = pathname === `/dashboard/chat/${chat.id}`
+              const isDeleting = deletingChatId === chat.id
               return (
-                <Link 
-                  key={chat.id} 
-                  href={`/dashboard/chat/${chat.id}`}
-                  className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
-                    isActive 
-                      ? 'bg-secondary-container text-on-secondary-container' 
-                      : 'text-on-surface-variant hover:bg-surface-container-highest'
-                  }`}
-                >
-                  <span className="material-symbols-outlined text-[20px]">
-                    chat_bubble
-                  </span>
-                  <span className="truncate flex-1 text-sm font-medium">{chat.title}</span>
-                </Link>
+                <div key={chat.id} className="group relative flex items-center">
+                  <Link 
+                    href={`/dashboard/chat/${chat.id}`}
+                    className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors w-full pr-9 ${
+                      isActive 
+                        ? 'bg-secondary-container text-on-secondary-container' 
+                        : 'text-on-surface-variant hover:bg-surface-container-highest'
+                    }`}
+                  >
+                    <span className="material-symbols-outlined text-[20px]">
+                      chat_bubble
+                    </span>
+                    <span className="truncate flex-1 text-sm font-medium">{chat.title}</span>
+                  </Link>
+
+                  <button
+                    onClick={(e) => handleDeleteChat(e, chat.id)}
+                    disabled={isDeleting}
+                    title="Delete chat"
+                    className="absolute right-2 p-1.5 rounded-md text-on-surface-variant/60 hover:text-error hover:bg-error-container/40 opacity-0 group-hover:opacity-100 transition-all cursor-pointer"
+                  >
+                    {isDeleting ? (
+                      <span className="material-symbols-outlined text-[16px] animate-spin">progress_activity</span>
+                    ) : (
+                      <span className="material-symbols-outlined text-[18px]">delete</span>
+                    )}
+                  </button>
+                </div>
               )
             })
           )}
