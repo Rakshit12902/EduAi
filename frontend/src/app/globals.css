@@ -1,0 +1,139 @@
+@import "tailwindcss";
+
+@theme {
+  --color-surface: #f8f9ff;
+  --color-surface-dim: #cbdbf5;
+  --color-surface-bright: #f8f9ff;
+  --color-surface-container-lowest: #ffffff;
+  --color-surface-container-low: #eff4ff;
+  --color-surface-container: #e5eeff;
+  --color-surface-container-high: #dce9ff;
+  --color-surface-container-highest: #d3e4fe;
+  --color-on-surface: #0b1c30;
+  --color-on-surface-variant: #464554;
+  --color-inverse-surface: #213145;
+  --color-inverse-on-surface: #eaf1ff;
+  --color-outline: #767586;
+  --color-outline-variant: #c7c4d7;
+  --color-surface-tint: #494bd6;
+  --color-primary: #4648d4;
+  --color-on-primary: #ffffff;
+  --color-primary-container: #6063ee;
+  --color-on-primary-container: #fffbff;
+  --color-inverse-primary: #c0c1ff;
+  --color-secondary: #8127cf;
+  --color-on-secondary: #ffffff;
+  --color-secondary-container: #9c48ea;
+  --color-on-secondary-container: #fffbff;
+  --color-tertiary: #545d62;
+  --color-on-tertiary: #ffffff;
+  --color-tertiary-container: #6d767b;
+  --color-on-tertiary-container: #fbfdff;
+  --color-error: #ba1a1a;
+  --color-on-error: #ffffff;
+  --color-error-container: #ffdad6;
+  --color-on-error-container: #93000a;
+  --color-primary-fixed: #e1e0ff;
+  --color-primary-fixed-dim: #c0c1ff;
+  --color-on-primary-fixed: #07006c;
+  --color-on-primary-fixed-variant: #2f2ebe;
+  --color-secondary-fixed: #f0dbff;
+  --color-secondary-fixed-dim: #ddb7ff;
+  --color-on-secondary-fixed: #2c0051;
+  --color-on-secondary-fixed-variant: #6900b3;
+  --color-tertiary-fixed: #dbe4ea;
+  --color-tertiary-fixed-dim: #bfc8ce;
+  --color-on-tertiary-fixed: #141d21;
+  --color-on-tertiary-fixed-variant: #3f484d;
+  --color-background: #f8f9ff;
+  --color-on-background: #0b1c30;
+  --color-surface-variant: #d3e4fe;
+  
+  --font-headline-md: var(--font-hanken-grotesk), sans-serif;
+  --font-label-md: var(--font-jetbrains-mono), monospace;
+  --font-display-lg: var(--font-hanken-grotesk), sans-serif;
+  --font-headline-lg: var(--font-hanken-grotesk), sans-serif;
+  --font-body-lg: var(--font-inter), sans-serif;
+  --font-body-md: var(--font-inter), sans-serif;
+  
+  --spacing-margin-mobile: 16px;
+  --spacing-gutter: 24px;
+  --spacing-margin-desktop: 40px;
+  --spacing-container-max: 1280px;
+  --spacing-unit: 8px;
+}
+
+@layer base {
+  html.dark {
+    --color-surface: #0f172a;
+    --color-surface-dim: #090d16;
+    --color-surface-bright: #1e293b;
+    --color-surface-container-lowest: #0b0f19;
+    --color-surface-container-low: #111827;
+    --color-surface-container: #1e293b;
+    --color-surface-container-high: #334155;
+    --color-surface-container-highest: #475569;
+    --color-on-surface: #f8fafc;
+    --color-on-surface-variant: #94a3b8;
+    --color-outline: #64748b;
+    --color-outline-variant: #334155;
+    --color-background: #090d16;
+    --color-on-background: #f8fafc;
+    --color-surface-variant: #1e293b;
+  }
+
+  body {
+    background-color: var(--color-background);
+    color: var(--color-on-surface);
+    font-family: var(--font-body-md);
+  }
+}
+
+@layer utilities {
+  .glass-card {
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(12px);
+    border: 1.5px solid rgba(255, 255, 255, 0.5);
+  }
+  
+  .glass-panel {
+    background: rgba(255, 255, 255, 0.65);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+  }
+
+  .material-symbols-outlined {
+    font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+  }
+
+  .primary-glow:hover {
+    box-shadow: 0px 4px 20px rgba(99, 102, 241, 0.4);
+  }
+
+  .ai-gradient-icon {
+    background: linear-gradient(135deg, #6063ee 0%, #9c48ea 100%);
+  }
+  
+  .message-gradient {
+    background: linear-gradient(135deg, #6366F1 0%, #8127cf 100%);
+  }
+  
+  .floating-input-shadow {
+    box-shadow: 0 10px 40px rgba(99, 102, 241, 0.1);
+  }
+
+  .custom-scroll::-webkit-scrollbar {
+    width: 6px;
+  }
+  .custom-scroll::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .custom-scroll::-webkit-scrollbar-thumb {
+    background: var(--color-surface-highest);
+    border-radius: 10px;
+  }
+
+  .hide-scrollbar::-webkit-scrollbar { display: none; }
+  .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+}
