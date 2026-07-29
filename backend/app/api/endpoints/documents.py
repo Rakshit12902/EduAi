@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, status
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, status, BackgroundTasks
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from app.api.deps import get_db, get_current_user
@@ -6,7 +6,6 @@ from app.models.chat import Chat
 from app.models.document import Document, ProcessingJob
 from app.models.enums import DocumentStatus, JobStatus
 from app.core.aws import upload_file_to_s3
-from app.worker import process_document_task
 import uuid
 import logging
 
@@ -30,6 +29,7 @@ ALLOWED_MIME_TYPES = [
 @router.post("/chats/{chat_id}/documents", status_code=status.HTTP_201_CREATED)
 async def upload_document(
     chat_id: str,
+    background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     db: AsyncSession = Depends(get_db),
     current_user = Depends(get_current_user)
@@ -88,12 +88,9 @@ async def upload_document(
     db.add(new_job)
     await db.commit()
     
-    # 7. Dispatch Celery Task
-    task = process_document_task.delay(document_id)
-    
-    # Update job with celery task id
-    new_job.celery_task_id = task.id
-    await db.commit()
+    # 7. Dispatch FastAPI Background Task
+    from app.services.document_worker import process_document_async
+    background_tasks.add_task(process_document_async, document_id)
     
     return {
         "document_id": document_id,

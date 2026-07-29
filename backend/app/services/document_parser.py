@@ -55,29 +55,19 @@ def describe_image_multimodal(image_bytes: bytes) -> str:
     gemini_key = getattr(settings, "GEMINI_API_KEY", "")
     if gemini_key:
         try:
-            import google.generativeai as genai
-            genai.configure(api_key=gemini_key)
-            model = genai.GenerativeModel('gemini-1.5-flash')
+            from google import genai
+            client = genai.Client(api_key=gemini_key)
             image = Image.open(io.BytesIO(image_bytes))
-            response = model.generate_content([
-                "Describe this image in detail for a teaching assistant knowledge base. Describe any diagrams, charts, graphs, shapes, colors, or structural relationships.",
-                image
-            ])
+            response = client.models.generate_content(
+                model='gemini-2.5-flash',
+                contents=[
+                    image,
+                    "Describe this image in detail for a teaching assistant knowledge base. Describe any diagrams, charts, graphs, shapes, colors, or structural relationships."
+                ]
+            )
             return response.text.strip()
         except Exception as e:
             logger.error(f"Error in Gemini Multimodal Vision: {e}")
-
-    # Local BLIP Fallback
-    try:
-        processor, model = get_blip_model()
-        if processor and model:
-            raw_image = Image.open(io.BytesIO(image_bytes)).convert('RGB')
-            inputs = processor(raw_image, return_tensors="pt")
-            out = model.generate(**inputs, max_new_tokens=50)
-            caption = processor.decode(out[0], skip_special_tokens=True)
-            return caption.strip()
-    except Exception as e:
-        logger.error(f"Error in BLIP local vision: {e}")
 
     return ""
 

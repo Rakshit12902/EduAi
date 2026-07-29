@@ -24,7 +24,7 @@ async def init_qdrant():
             logger.info(f"Creating Qdrant collection: {COLLECTION_NAME}")
             await qdrant_client.create_collection(
                 collection_name=COLLECTION_NAME,
-                vectors_config=VectorParams(size=384, distance=Distance.COSINE),
+                vectors_config=VectorParams(size=3072, distance=Distance.COSINE),
             )
             
             # Create payload indices for fast filtering as specified in FRD

@@ -1,8 +1,6 @@
 import logging
 import asyncio
 from typing import List, Dict, Any, Optional
-from uuid import UUID
-from sentence_transformers import SentenceTransformer, CrossEncoder
 from qdrant_client.models import Filter, FieldCondition, MatchValue
 from groq import AsyncGroq
 from app.core.config import settings
@@ -10,31 +8,31 @@ from app.core.qdrant import qdrant_client, COLLECTION_NAME
 
 logger = logging.getLogger(__name__)
 
-# Global model instances
-embedding_model: Optional[SentenceTransformer] = None
-reranker_model: Optional[CrossEncoder] = None
-
 groq_client = AsyncGroq(api_key=settings.GROQ_API_KEY)
 
 def init_models():
-    """Load AI models synchronously (called during startup)."""
-    global embedding_model, reranker_model
-    logger.info("Loading Embedding Model...")
-    embedding_model = SentenceTransformer("BAAI/bge-small-en-v1.5")
-    logger.info("Loading Reranker Model...")
-    reranker_model = CrossEncoder("BAAI/bge-reranker-base")
-    logger.info("Models loaded successfully.")
+    """No local models needed anymore! We use Google API for embeddings to save RAM."""
+    logger.info("Using lightweight external APIs for embeddings. Local PyTorch models skipped.")
 
 async def embed_query(query: str) -> List[float]:
-    """Embed the user's query."""
-    if embedding_model is None:
-        raise RuntimeError("Embedding model not initialized.")
-    # BAAI/bge requires this prefix for queries
-    prefixed_query = f"Represent this sentence for searching relevant passages: {query}"
-    # SentenceTransformer is synchronous, run in executor
+    """Embed the user's query using Google's text-embedding-004 API."""
+    if not settings.GEMINI_API_KEY:
+        logger.warning("No GEMINI_API_KEY provided. Returning zero-vector fallback for RAG.")
+        return [0.0] * 384 # Fallback dimension length
+        
+    from google import genai
+    client = genai.Client(api_key=settings.GEMINI_API_KEY)
+    
+    # Run synchronous network call in threadpool
     loop = asyncio.get_event_loop()
-    embedding = await loop.run_in_executor(None, embedding_model.encode, prefixed_query)
-    return embedding.tolist()
+    response = await loop.run_in_executor(
+        None, 
+        lambda: client.models.embed_content(
+            model='gemini-embedding-001',
+            contents=query,
+        )
+    )
+    return response.embeddings[0].values
 
 async def retrieve_chunks(user_id: str, chat_id: str, query_vector: List[float], query: str = "", top_k: int = 20) -> List[Any]:
     """Retrieve top chunks from Qdrant strictly filtered by user_id and chat_id."""
@@ -86,6 +84,8 @@ async def retrieve_chunks(user_id: str, chat_id: str, query_vector: List[float],
                     )
                     for fp in file_points[0]:
                         if fp.id not in existing_ids:
+                            # explicitly set score so it doesn't get filtered out by 0.15 threshold
+                            fp.score = 1.0
                             points.append(fp)
                             existing_ids.add(fp.id)
         except Exception as e:
@@ -94,30 +94,17 @@ async def retrieve_chunks(user_id: str, chat_id: str, query_vector: List[float],
     return points
 
 async def rerank_chunks(query: str, chunks: List[Any], top_n: int = 5) -> List[Any]:
-    """Rerank retrieved chunks using CrossEncoder and sigmoid probability normalization."""
+    """Return top chunks. Local PyTorch reranking is disabled to stay under 512MB RAM."""
     if not chunks:
         return []
-    if reranker_model is None:
-        raise RuntimeError("Reranker model not initialized.")
         
-    import math
-    pairs = [[query, point.payload.get("text") or point.payload.get("chunk_text", "")] for point in chunks]
+    # We sort by the Qdrant retrieval score since we aren't using a heavy local reranker
+    chunks.sort(key=lambda x: getattr(x, 'score', 0.0), reverse=True)
     
-    loop = asyncio.get_event_loop()
-    raw_scores = await loop.run_in_executor(None, reranker_model.predict, pairs)
+    # Require minimum 0.15 relevance match score for Gemini embeddings
+    MIN_RELEVANCE_PROB = 0.15
     
-    # Convert raw logits to sigmoid probability (0.0 to 1.0) and assign to chunk points
-    for point, score in zip(chunks, raw_scores):
-        prob = 1.0 / (1.0 + math.exp(-float(score)))
-        point.score = prob
-
-    # Sort by probability score descending
-    chunks.sort(key=lambda x: x.score, reverse=True)
-    
-    # Require minimum 60% (0.60) relevance match score (Unrelated questions score ~50.0% or lower)
-    MIN_RELEVANCE_PROB = 0.60
-    
-    filtered_chunks = [p for p in chunks if p.score >= MIN_RELEVANCE_PROB]
+    filtered_chunks = [p for p in chunks if getattr(p, 'score', 0.0) >= MIN_RELEVANCE_PROB]
     return filtered_chunks[:top_n]
 
 LANG_MAP = {
@@ -150,6 +137,9 @@ def build_prompt(query: str, context_chunks: List[Any], history: List[Dict[str, 
     system_prompt = (
         f"{lang_instruction}"
         "You are a helpful teaching assistant. Answer questions based on the provided document context. "
+        "The user has uploaded documents and their extracted text is provided in the CONTEXT section below. "
+        "If the user asks you to read, summarize, or analyze a file, they are referring to the CONTEXT. "
+        "Do NOT say you cannot read files. Instead, use the CONTEXT to fulfill their request. "
         "If the answer is in the context, cite the source using the filename and page number. "
         "If the answer is not available in the context, answer directly from your general knowledge. "
         "Do not hallucinate facts."

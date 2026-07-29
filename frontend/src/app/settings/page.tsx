@@ -20,7 +20,7 @@ export default function SettingsPage() {
   const { theme, setTheme } = useTheme()
   const queryClient = useQueryClient()
   const [selectedTheme, setSelectedTheme] = useState<Theme>(theme)
-  const [llmModel, setLlmModel] = useState('llama-3.3-70b-versatile')
+  const [llmModel, setLlmModel] = useState('qwen/qwen3.6-27b')
   const [temperature, setTemperature] = useState(0.20)
   const [language, setLanguage] = useState('en')
   const [saveStatus, setSaveStatus] = useState<string | null>(null)
@@ -220,9 +220,9 @@ export default function SettingsPage() {
                 onChange={(e) => setLlmModel(e.target.value)}
                 className="w-full bg-surface-container border border-outline-variant/40 rounded-xl px-4 py-2.5 text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/30"
               >
-                <option value="llama-3.3-70b-versatile">Llama 3.3 70B Versatile (Recommended)</option>
-                <option value="llama-3.1-8b-instant">Llama 3.1 8B Instant (Ultra Fast)</option>
-                <option value="mixtral-8x7b-32768">Mixtral 8x7B (High Context)</option>
+                <option value="qwen/qwen3.6-27b">Qwen 3.6 27B (Ultra Fast Default)</option>
+                <option value="openai/gpt-oss-120b">GPT OSS 120B (Heavy/Versatile)</option>
+                <option value="openai/gpt-oss-20b">GPT OSS 20B (Balanced)</option>
               </select>
             </div>
 

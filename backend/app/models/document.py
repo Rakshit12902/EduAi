@@ -39,7 +39,6 @@ class ProcessingJob(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     document_id = Column(UUID(as_uuid=True), ForeignKey("documents.id", ondelete="CASCADE"), nullable=False, index=True)
-    celery_task_id = Column(String(255), unique=True, nullable=True, index=True)
     status = Column(Enum(JobStatus), nullable=False, default=JobStatus.QUEUED)
     progress = Column(Integer, nullable=False, default=0)
     current_step = Column(String(255), nullable=True)

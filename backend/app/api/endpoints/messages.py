@@ -18,6 +18,52 @@ from app.core.rag import embed_query, retrieve_chunks, rerank_chunks, build_prom
 
 router = APIRouter()
 
+class ThinkFilter:
+    def __init__(self):
+        self.in_think = False
+        self.buffer = ""
+        self.think_start_tag = "<think>"
+        self.think_end_tag = "</think>"
+    
+    def process(self, chunk: str) -> str:
+        self.buffer += chunk
+        output = ""
+        while self.buffer:
+            if self.in_think:
+                end_idx = self.buffer.find(self.think_end_tag)
+                if end_idx != -1:
+                    self.in_think = False
+                    self.buffer = self.buffer[end_idx + len(self.think_end_tag):]
+                else:
+                    potential_partial = False
+                    for i in range(1, len(self.think_end_tag)):
+                        if self.buffer.endswith(self.think_end_tag[:i]):
+                            potential_partial = True
+                            self.buffer = self.buffer[-i:]
+                            break
+                    if not potential_partial:
+                        self.buffer = ""
+                    break
+            else:
+                start_idx = self.buffer.find(self.think_start_tag)
+                if start_idx != -1:
+                    output += self.buffer[:start_idx]
+                    self.in_think = True
+                    self.buffer = self.buffer[start_idx + len(self.think_start_tag):]
+                else:
+                    potential_partial = False
+                    for i in range(1, len(self.think_start_tag)):
+                        if self.buffer.endswith(self.think_start_tag[:i]):
+                            potential_partial = True
+                            output += self.buffer[:-i]
+                            self.buffer = self.buffer[-i:]
+                            break
+                    if not potential_partial:
+                        output += self.buffer
+                        self.buffer = ""
+                    break
+        return output
+
 from sqlalchemy.orm import selectinload
 
 @router.get("/", response_model=List[MessageResponse])
@@ -66,11 +112,30 @@ async def generate_chat_stream(
 
     # 2. RAG Pipeline
     try:
+        # Fetch the most recent document's filename in the chat to prioritize it if the user query is vague
+        latest_doc_filename = ""
+        async with db_session_factory() as db:
+            from app.models.document import Document
+            doc_res = await db.execute(
+                select(Document)
+                .where(Document.chat_id == chat_id)
+                .order_by(Document.created_at.desc())
+                .limit(1)
+            )
+            latest_doc = doc_res.scalars().first()
+            if latest_doc:
+                latest_doc_filename = latest_doc.filename
+
         # Embed query
         query_vector = await embed_query(query)
         
         # Retrieve chunks from Qdrant
-        retrieved_chunks = await retrieve_chunks(user_id=str(user_id), chat_id=str(chat_id), query_vector=query_vector, query=query, top_k=20)
+        search_query = query
+        if latest_doc_filename and latest_doc_filename.lower() not in query.lower():
+            # Append filename to internal retrieval query to trigger explicit filename matching
+            search_query = f"{query} {latest_doc_filename}"
+            
+        retrieved_chunks = await retrieve_chunks(user_id=str(user_id), chat_id=str(chat_id), query_vector=query_vector, query=search_query, top_k=20)
         
         # Rerank chunks
         top_chunks = await rerank_chunks(query=query, chunks=retrieved_chunks, top_n=5)
@@ -106,26 +171,63 @@ async def generate_chat_stream(
         except Exception as groq_err:
             if "rate_limit" in str(groq_err).lower() or "429" in str(groq_err):
                 import logging
-                logging.getLogger(__name__).warning(f"Model {user_model} rate limited. Falling back to llama-3.1-8b-instant...")
-                stream = await groq_client.chat.completions.create(
-                    messages=messages,
-                    model="llama-3.1-8b-instant",
-                    temperature=user_temp,
-                    max_tokens=1024,
-                    stream=True
+                logging.getLogger(__name__).warning(f"Model {user_model} rate limited. Falling back to Gemini Flash...")
+                
+                if not settings.GEMINI_API_KEY:
+                    raise Exception("Groq rate limited and no Gemini fallback API key provided.")
+                    
+                from google import genai
+                gemini_client = genai.Client(api_key=settings.GEMINI_API_KEY)
+                
+                # Format messages for Gemini (it prefers a single prompt string if we aren't doing strict multi-turn parts)
+                # To be safe and preserve history, we can pass the raw string prompt
+                gemini_prompt = "\n".join([f"{m['role'].upper()}: {m['content']}" for m in messages])
+                
+                response = gemini_client.models.generate_content_stream(
+                    model='gemini-1.5-flash',
+                    contents=gemini_prompt
                 )
+                
+                stream = response # we can iterate over this directly below
             else:
                 raise groq_err
 
         full_response = ""
+        think_filter = ThinkFilter()
         
-        async for chunk in stream:
-            content = chunk.choices[0].delta.content
-            if content:
-                full_response += content
-                payload = json.dumps({"type": "token", "text": content})
-                yield f"data: {payload}\n\n"
-                
+        # Handle async and sync iterators based on which client succeeded
+        is_gemini = not hasattr(stream, '__aiter__')
+        
+        if is_gemini:
+            # Synchronous generator from google-genai
+            for chunk in stream:
+                content = chunk.text
+                if content:
+                    filtered = think_filter.process(content)
+                    if filtered:
+                        full_response += filtered
+                        payload = json.dumps({"type": "token", "text": filtered})
+                        yield f"data: {payload}\n\n"
+                    # Small sleep to yield to event loop since this is a sync generator running in async endpoint
+                    await asyncio.sleep(0)
+        else:
+            # Async generator from AsyncGroq
+            async for chunk in stream:
+                content = chunk.choices[0].delta.content
+                if content:
+                    filtered = think_filter.process(content)
+                    if filtered:
+                        full_response += filtered
+                        payload = json.dumps({"type": "token", "text": filtered})
+                        yield f"data: {payload}\n\n"
+                        
+        # Flush any remaining text in the buffer
+        final_text = think_filter.process("")
+        if final_text:
+            full_response += final_text
+            payload = json.dumps({"type": "token", "text": final_text})
+            yield f"data: {payload}\n\n"
+                    
         # Determine answer type directly from retrieved chunks
         answer_type = AnswerType.document if top_chunks else AnswerType.general
 
