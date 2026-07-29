@@ -24,7 +24,10 @@ async def get_user_settings(
         await db.commit()
         await db.refresh(settings)
         
-    return settings
+    # Inject full_name from the user model into the response
+    settings_dict = {c.name: getattr(settings, c.name) for c in settings.__table__.columns}
+    settings_dict["full_name"] = current_user.full_name
+    return settings_dict
 
 @router.patch("/", response_model=UserSettingsResponse)
 async def update_user_settings(
@@ -41,9 +44,20 @@ async def update_user_settings(
         db.add(settings)
         
     update_data = settings_in.model_dump(exclude_unset=True)
+    
+    # Handle full_name update separately on the UserProfile
+    if "full_name" in update_data:
+        current_user.full_name = update_data.pop("full_name")
+        db.add(current_user)
+        
+    # Apply remaining updates to UserSettings
     for field, value in update_data.items():
         setattr(settings, field, value)
         
     await db.commit()
     await db.refresh(settings)
-    return settings
+    await db.refresh(current_user)
+    
+    settings_dict = {c.name: getattr(settings, c.name) for c in settings.__table__.columns}
+    settings_dict["full_name"] = current_user.full_name
+    return settings_dict

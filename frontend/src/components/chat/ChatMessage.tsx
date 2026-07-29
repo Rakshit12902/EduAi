@@ -70,10 +70,10 @@ export default function ChatMessage({ role, content, answer_type, sources }: Cha
           )}
 
           {/* Message Text Bubble */}
-          <div className={`px-4 py-3 rounded-2xl text-sm leading-relaxed ${
+          <div className={`px-4 py-3 rounded-2xl text-sm leading-relaxed max-w-full ${
             isUser 
-              ? 'bg-primary text-on-primary rounded-tr-sm shadow-sm' 
-              : 'bg-surface-container text-on-surface rounded-tl-sm border border-outline-variant/40 shadow-sm'
+              ? 'bg-primary text-on-primary rounded-tr-sm shadow-sm self-end' 
+              : 'bg-surface-container text-on-surface rounded-tl-sm border border-outline-variant/40 shadow-sm self-start'
           }`}>
             {content ? (
               <div className="whitespace-pre-wrap">
@@ -87,9 +87,48 @@ export default function ChatMessage({ role, content, answer_type, sources }: Cha
             )}
           </div>
 
+          {/* Action Bar */}
+          <div className={`flex items-center gap-1.5 mt-0.5 text-on-surface-variant/60 ${isUser ? 'self-end flex-row-reverse' : 'self-start'}`}>
+            <button 
+              onClick={() => {
+                navigator.clipboard.writeText(cleanedContent)
+                setCopiedCode(cleanedContent)
+                setTimeout(() => setCopiedCode(null), 2000)
+              }}
+              className="p-1 hover:text-on-surface hover:bg-surface-container-high rounded-md transition-colors flex items-center justify-center" 
+              title="Copy message"
+            >
+              <span className="material-symbols-outlined text-[16px]">
+                {copiedCode === cleanedContent ? 'check' : 'content_copy'}
+              </span>
+            </button>
+            
+            {isUser ? (
+              <button className="p-1 hover:text-on-surface hover:bg-surface-container-high rounded-md transition-colors flex items-center justify-center" title="Edit query">
+                <span className="material-symbols-outlined text-[16px]">edit</span>
+              </button>
+            ) : (
+              <>
+                <button className="p-1 hover:text-on-surface hover:bg-surface-container-high rounded-md transition-colors flex items-center justify-center" title="Regenerate response">
+                  <span className="material-symbols-outlined text-[16px]">refresh</span>
+                </button>
+                <button className="p-1 hover:text-on-surface hover:bg-surface-container-high rounded-md transition-colors flex items-center justify-center" title="Good response">
+                  <span className="material-symbols-outlined text-[16px]">thumb_up</span>
+                </button>
+                <button className="p-1 hover:text-on-surface hover:bg-surface-container-high rounded-md transition-colors flex items-center justify-center" title="Bad response">
+                  <span className="material-symbols-outlined text-[16px]">thumb_down</span>
+                </button>
+              </>
+            )}
+            
+            <span className={`text-[11px] font-medium ${isUser ? 'mr-2' : 'ml-2'}`}>
+              just now
+            </span>
+          </div>
+
           {/* Interactive Source Cards */}
           {uniqueSources.length > 0 && !isUser && (
-            <div className="flex flex-col gap-2 mt-2 pt-2 border-t border-outline-variant/20">
+            <div className="flex flex-col gap-2 mt-2 pt-2 border-t border-outline-variant/20 self-start w-full">
               <div className="flex items-center justify-between">
                 <span className="text-[11px] uppercase tracking-wider font-bold text-on-surface-variant flex items-center gap-1">
                   <span className="material-symbols-outlined text-[13px]">attach_file</span>

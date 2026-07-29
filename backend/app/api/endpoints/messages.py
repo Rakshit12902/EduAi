@@ -15,6 +15,7 @@ from app.models.message import Message, MessageSource
 from app.models.enums import MessageRole, AnswerType
 from app.models.user import UserProfile
 from app.core.rag import embed_query, retrieve_chunks, rerank_chunks, build_prompt, groq_client
+from app.core.config import settings
 
 router = APIRouter()
 
@@ -63,6 +64,11 @@ class ThinkFilter:
                         self.buffer = ""
                     break
         return output
+
+    def flush(self) -> str:
+        if self.in_think and self.buffer:
+            return "\n\n*[The AI's reasoning process exceeded the token limit and was cut off. Try asking a simpler question.]*"
+        return self.buffer
 
 from sqlalchemy.orm import selectinload
 
@@ -165,64 +171,51 @@ async def generate_chat_stream(
                 messages=messages,
                 model=user_model,
                 temperature=user_temp,
-                max_tokens=1024,
+                max_tokens=2048,
                 stream=True
             )
         except Exception as groq_err:
-            if "rate_limit" in str(groq_err).lower() or "429" in str(groq_err):
-                import logging
-                logging.getLogger(__name__).warning(f"Model {user_model} rate limited. Falling back to Gemini Flash...")
+            import logging
+            logging.getLogger(__name__).warning(f"Groq API failed ({groq_err}). Falling back to Gemini Flash...")
+            
+            if not settings.GEMINI_API_KEY:
+                raise Exception("Groq failed and no Gemini fallback API key provided.")
                 
-                if not settings.GEMINI_API_KEY:
-                    raise Exception("Groq rate limited and no Gemini fallback API key provided.")
-                    
-                from google import genai
-                gemini_client = genai.Client(api_key=settings.GEMINI_API_KEY)
-                
-                # Format messages for Gemini (it prefers a single prompt string if we aren't doing strict multi-turn parts)
-                # To be safe and preserve history, we can pass the raw string prompt
-                gemini_prompt = "\n".join([f"{m['role'].upper()}: {m['content']}" for m in messages])
-                
-                response = gemini_client.models.generate_content_stream(
-                    model='gemini-1.5-flash',
-                    contents=gemini_prompt
-                )
-                
-                stream = response # we can iterate over this directly below
-            else:
-                raise groq_err
+            from google import genai
+            gemini_client = genai.Client(api_key=settings.GEMINI_API_KEY)
+            
+            # Format messages for Gemini (it prefers a single prompt string if we aren't doing strict multi-turn parts)
+            gemini_prompt = "\n".join([f"{m['role'].upper()}: {m['content']}" for m in messages])
+            
+            # Use the asynchronous client under .aio
+            response = gemini_client.aio.models.generate_content_stream(
+                model='gemini-2.0-flash',
+                contents=gemini_prompt
+            )
+            
+            stream = response
 
         full_response = ""
         think_filter = ThinkFilter()
         
-        # Handle async and sync iterators based on which client succeeded
-        is_gemini = not hasattr(stream, '__aiter__')
-        
-        if is_gemini:
-            # Synchronous generator from google-genai
-            for chunk in stream:
+        # Async generator handles both AsyncGroq and google-genai aio streams
+        async for chunk in stream:
+            # Handle different chunk object structures
+            content = ""
+            if hasattr(chunk, 'text'):
                 content = chunk.text
-                if content:
-                    filtered = think_filter.process(content)
-                    if filtered:
-                        full_response += filtered
-                        payload = json.dumps({"type": "token", "text": filtered})
-                        yield f"data: {payload}\n\n"
-                    # Small sleep to yield to event loop since this is a sync generator running in async endpoint
-                    await asyncio.sleep(0)
-        else:
-            # Async generator from AsyncGroq
-            async for chunk in stream:
+            elif hasattr(chunk, 'choices') and chunk.choices and hasattr(chunk.choices[0].delta, 'content'):
                 content = chunk.choices[0].delta.content
-                if content:
-                    filtered = think_filter.process(content)
-                    if filtered:
-                        full_response += filtered
-                        payload = json.dumps({"type": "token", "text": filtered})
-                        yield f"data: {payload}\n\n"
+                
+            if content:
+                filtered = think_filter.process(content)
+                if filtered:
+                    full_response += filtered
+                    payload = json.dumps({"type": "token", "text": filtered})
+                    yield f"data: {payload}\n\n"
                         
         # Flush any remaining text in the buffer
-        final_text = think_filter.process("")
+        final_text = think_filter.flush()
         if final_text:
             full_response += final_text
             payload = json.dumps({"type": "token", "text": final_text})
@@ -230,6 +223,11 @@ async def generate_chat_stream(
                     
         # Determine answer type directly from retrieved chunks
         answer_type = AnswerType.document if top_chunks else AnswerType.general
+        
+        # If chunks were provided but the AI did NOT cite a source, it means it used general knowledge.
+        if top_chunks and "source:" not in full_response.lower():
+            answer_type = AnswerType.general
+            top_chunks = []
 
         # Construct sources for DB and client
         sources_payload = []

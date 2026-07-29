@@ -10,24 +10,38 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const router = useRouter()
 
   useEffect(() => {
+    let mounted = true;
+
     const checkAuth = async () => {
+      // Small delay to allow Supabase to sync local storage during fast client-side navigation
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
       const { data: { session } } = await supabase.auth.getSession()
-      if (!session) {
-        router.push('/login')
-      } else {
-        setLoading(false)
+      if (mounted) {
+        if (!session && !window.location.hash.includes('access_token')) {
+          router.push('/login')
+        } else if (session) {
+          setLoading(false)
+        }
       }
     }
     
     checkAuth()
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (!session) {
-        router.push('/login')
+      if (mounted) {
+        if (!session) {
+          router.push('/login')
+        } else {
+          setLoading(false)
+        }
       }
     })
 
-    return () => subscription.unsubscribe()
+    return () => {
+      mounted = false;
+      subscription.unsubscribe()
+    }
   }, [router])
 
   if (loading) {

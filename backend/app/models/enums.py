@@ -28,6 +28,12 @@ class AppTheme(str, enum.Enum):
     dark = 'dark'
     system = 'system'
 
+class AppAccentColor(str, enum.Enum):
+    emerald = 'emerald'
+    teal = 'teal'
+    sky = 'sky'
+    violet = 'violet'
+
 class AppLanguage(str, enum.Enum):
     en = 'en'
     hi = 'hi'

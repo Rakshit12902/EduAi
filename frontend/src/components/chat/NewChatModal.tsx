@@ -30,7 +30,7 @@ export function NewChatModal({ isOpen, onClose, onSuccess }: Props) {
       if (!session) throw new Error('No session')
 
       const res = await axios.post(
-        'http://localhost:8000/api/v1/chats/',
+        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/v1/chats/`,
         { title, description },
         { headers: { Authorization: `Bearer ${session.access_token}` } }
       )

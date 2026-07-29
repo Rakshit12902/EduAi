@@ -31,7 +31,7 @@ export default function DocumentUploadZone({ chatId, onUploadSuccess }: Document
       formData.append('file', file)
 
       const response = await axios.post(
-        `http://localhost:8000/api/v1/chats/${chatId}/documents/`,
+        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/v1/chats/${chatId}/documents/`,
         formData,
         {
           headers: {

@@ -4,7 +4,7 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.models.base import Base
-from app.models.enums import AppTheme, AppLanguage
+from app.models.enums import AppTheme, AppLanguage, AppAccentColor
 
 class UserSettings(Base):
     __tablename__ = "user_settings"
@@ -12,6 +12,7 @@ class UserSettings(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id = Column(UUID(as_uuid=True), ForeignKey("user_profiles.id", ondelete="CASCADE"), nullable=False, unique=True)
     theme = Column(Enum(AppTheme), nullable=False, default=AppTheme.system)
+    accent_color = Column(Enum(AppAccentColor), nullable=False, default=AppAccentColor.violet)
     language = Column(Enum(AppLanguage), nullable=False, default=AppLanguage.en)
     llm_model = Column(String(255), nullable=False, default="qwen/qwen3.6-27b")
     embedding_model = Column(String(255), nullable=False, default="gemini-embedding-001")

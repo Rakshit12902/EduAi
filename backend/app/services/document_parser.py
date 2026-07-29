@@ -2,7 +2,6 @@ import fitz  # PyMuPDF
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 import logging
 import time
-import easyocr
 import base64
 from PIL import Image
 import io
@@ -10,47 +9,15 @@ from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
-# Initialize EasyOCR reader lazily
-ocr_reader = None
-blip_processor = None
-blip_model = None
-
-def get_ocr_reader():
-    global ocr_reader
-    if ocr_reader is None:
-        logger.info("Initializing EasyOCR reader...")
-        ocr_reader = easyocr.Reader(['en'], gpu=False)
-    return ocr_reader
-
-def get_blip_model():
-    global blip_processor, blip_model
-    if blip_model is None:
-        try:
-            logger.info("Initializing local BLIP Vision model...")
-            from transformers import BlipProcessor, BlipForConditionalGeneration
-            blip_processor = BlipProcessor.from_pretrained('Salesforce/blip-image-captioning-base')
-            blip_model = BlipForConditionalGeneration.from_pretrained('Salesforce/blip-image-captioning-base')
-        except Exception as e:
-            logger.error(f"Error loading BLIP model: {e}")
-            return None, None
-    return blip_processor, blip_model
-
 def extract_text_with_easyocr(image_input) -> str:
     """
-    Extracts exact character-level text from image file path or bytes using EasyOCR.
+    Disabled to save RAM on Render. Everything routes through Gemini now.
     """
-    try:
-        reader = get_ocr_reader()
-        results = reader.readtext(image_input)
-        text = " ".join([res[1] for res in results if res[2] > 0.15])
-        return text.strip()
-    except Exception as e:
-        logger.error(f"Error extracting text with EasyOCR: {e}")
-        return ""
+    return ""
 
 def describe_image_multimodal(image_bytes: bytes) -> str:
     """
-    Generates a visual description using Gemini API if key is present, otherwise falls back to local BLIP.
+    Generates OCR text and visual description using Gemini API to save RAM.
     """
     gemini_key = getattr(settings, "GEMINI_API_KEY", "")
     if gemini_key:
@@ -59,16 +26,17 @@ def describe_image_multimodal(image_bytes: bytes) -> str:
             client = genai.Client(api_key=gemini_key)
             image = Image.open(io.BytesIO(image_bytes))
             response = client.models.generate_content(
-                model='gemini-2.5-flash',
+                model='gemini-2.0-flash',
                 contents=[
                     image,
-                    "Describe this image in detail for a teaching assistant knowledge base. Describe any diagrams, charts, graphs, shapes, colors, or structural relationships."
+                    "Extract any text you see in this image verbatim. If there are diagrams, charts, graphs, shapes, colors, or structural relationships, describe them in detail for a teaching assistant knowledge base."
                 ]
             )
             return response.text.strip()
         except Exception as e:
             logger.error(f"Error in Gemini Multimodal Vision: {e}")
 
+    return ""
     return ""
 
 def extract_text_from_image(file_path: str) -> str:

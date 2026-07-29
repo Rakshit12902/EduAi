@@ -4,12 +4,14 @@ import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import axios from 'axios'
 import { supabase } from '@/lib/supabase'
-import { useTheme } from '@/components/theme/ThemeProvider'
+import { useTheme, AccentColor } from '@/components/theme/ThemeProvider'
 
 type Theme = 'light' | 'dark' | 'system'
 
 type UserSettings = {
   theme: Theme
+  accent_color: AccentColor
+  full_name: string
   language: string
   llm_model: string
   temperature: number
@@ -17,9 +19,10 @@ type UserSettings = {
 }
 
 export default function SettingsPage() {
-  const { theme, setTheme } = useTheme()
+  const { theme, setTheme, accentColor, setAccentColor } = useTheme()
   const queryClient = useQueryClient()
   const [selectedTheme, setSelectedTheme] = useState<Theme>(theme)
+  const [fullName, setFullName] = useState('')
   const [llmModel, setLlmModel] = useState('qwen/qwen3.6-27b')
   const [temperature, setTemperature] = useState(0.20)
   const [language, setLanguage] = useState('en')
@@ -32,7 +35,7 @@ export default function SettingsPage() {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) throw new Error('No session')
 
-      const res = await axios.get('http://localhost:8000/api/v1/settings/', {
+      const res = await axios.get(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/v1/settings/`, {
         headers: { Authorization: `Bearer ${session.access_token}` }
       })
       return res.data
@@ -44,6 +47,7 @@ export default function SettingsPage() {
       if (settingsData.theme) {
         setSelectedTheme(settingsData.theme)
       }
+      if (settingsData.full_name) setFullName(settingsData.full_name)
       if (settingsData.llm_model) setLlmModel(settingsData.llm_model)
       if (settingsData.temperature !== undefined) setTemperature(Number(settingsData.temperature))
       if (settingsData.language) setLanguage(settingsData.language)
@@ -56,7 +60,7 @@ export default function SettingsPage() {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) throw new Error('No session')
 
-      const res = await axios.patch('http://localhost:8000/api/v1/settings/', updatedFields, {
+      const res = await axios.patch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/v1/settings/`, updatedFields, {
         headers: { Authorization: `Bearer ${session.access_token}` }
       })
       return res.data
@@ -76,16 +80,21 @@ export default function SettingsPage() {
   const handleThemeChange = (newTheme: Theme) => {
     setSelectedTheme(newTheme)
     setTheme(newTheme)
-    saveMutation.mutate({ theme: newTheme })
+  }
+
+  const handleAccentColorChange = (newColor: any) => {
+    setAccentColor(newColor)
   }
 
   const handleLanguageChange = (newLang: string) => {
     setLanguage(newLang)
-    saveMutation.mutate({ language: newLang as any })
   }
 
-  const handleSaveAIPreferences = () => {
+  const handleSaveAllSettings = () => {
     saveMutation.mutate({
+      full_name: fullName,
+      theme: selectedTheme,
+      accent_color: accentColor,
       llm_model: llmModel,
       temperature,
       language: language as any
@@ -124,6 +133,34 @@ export default function SettingsPage() {
             </span>
           </div>
         )}
+
+        {/* Profile Card */}
+        <section className="bg-surface-container-low rounded-2xl p-6 border border-outline-variant/40 shadow-xs space-y-6">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
+              <span className="material-symbols-outlined text-2xl">person</span>
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold text-on-surface">Profile</h2>
+              <p className="text-xs text-on-surface-variant">Manage your account identity details.</p>
+            </div>
+          </div>
+
+          <div className="space-y-4 pt-2">
+            <div>
+              <label className="block text-xs font-semibold text-on-surface-variant uppercase tracking-wider mb-2">
+                Full name
+              </label>
+              <input
+                type="text"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                placeholder="Enter your full name"
+                className="w-full bg-surface-container border border-outline-variant/40 rounded-xl px-4 py-2.5 text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/30"
+              />
+            </div>
+          </div>
+        </section>
 
         {/* Theme Settings Card */}
         <section className="bg-surface-container-low rounded-2xl p-6 border border-outline-variant/40 shadow-xs space-y-6">
@@ -194,6 +231,38 @@ export default function SettingsPage() {
             </button>
 
           </div>
+
+          {/* Accent Color Selection */}
+          <div className="pt-6 border-t border-outline-variant/30">
+            <h3 className="text-sm font-semibold text-on-surface mb-4">Accent color</h3>
+            <div className="flex gap-4">
+              {[
+                { id: 'emerald', hex: '#10b981', name: 'Emerald' },
+                { id: 'teal', hex: '#14b8a6', name: 'Teal' },
+                { id: 'sky', hex: '#0ea5e9', name: 'Sky' },
+                { id: 'violet', hex: '#8b5cf6', name: 'Violet' }
+              ].map(color => (
+                <button
+                  key={color.id}
+                  onClick={() => handleAccentColorChange(color.id)}
+                  className="flex flex-col items-center gap-2 cursor-pointer group"
+                >
+                  <div 
+                    className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${
+                      accentColor === color.id ? 'ring-2 ring-offset-2 ring-offset-surface-container-low ring-primary scale-110' : 'hover:scale-105'
+                    }`}
+                    style={{ backgroundColor: color.hex }}
+                  >
+                    {accentColor === color.id && (
+                      <span className="material-symbols-outlined text-white text-sm">check</span>
+                    )}
+                  </div>
+                  <span className="text-[11px] text-on-surface-variant font-medium">{color.name}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
         </section>
 
         {/* AI Model & Parameters Card */}
@@ -268,7 +337,7 @@ export default function SettingsPage() {
             {/* Save Button */}
             <div className="pt-2 flex justify-end">
               <button
-                onClick={handleSaveAIPreferences}
+                onClick={handleSaveAllSettings}
                 disabled={saveMutation.isPending}
                 className="px-6 py-2.5 bg-primary hover:bg-primary/90 text-on-primary font-medium text-sm rounded-xl transition-all shadow-sm flex items-center gap-2"
               >
@@ -280,7 +349,7 @@ export default function SettingsPage() {
                 ) : (
                   <>
                     <span className="material-symbols-outlined text-[18px]">save</span>
-                    Save Preferences
+                    Save All Settings
                   </>
                 )}
               </button>

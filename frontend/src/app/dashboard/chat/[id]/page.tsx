@@ -1,6 +1,7 @@
 'use client'
 
 import { use, useState, useEffect, useRef } from 'react'
+import { useSearchParams, useRouter } from 'next/navigation'
 import { useQuery } from '@tanstack/react-query'
 import axios from 'axios'
 import { supabase } from '@/lib/supabase'
@@ -25,9 +26,12 @@ type Message = {
 
 export default function ChatPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
+  const searchParams = useSearchParams()
+  const router = useRouter()
   const [messages, setMessages] = useState<Message[]>([])
   const [isTyping, setIsTyping] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const hasAutoSent = useRef(false)
 
   const { data: chats } = useQuery({
     queryKey: ['chats'],
@@ -35,7 +39,7 @@ export default function ChatPage({ params }: { params: Promise<{ id: string }> }
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) throw new Error('No session')
       
-      const res = await axios.get('http://localhost:8000/api/v1/chats/', {
+      const res = await axios.get(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/v1/chats/`, {
         headers: { Authorization: `Bearer ${session.access_token}` }
       })
       return res.data as Chat[]
@@ -50,7 +54,7 @@ export default function ChatPage({ params }: { params: Promise<{ id: string }> }
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) return
       try {
-        const res = await axios.get(`http://localhost:8000/api/v1/chats/${id}/messages/`, {
+        const res = await axios.get(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/v1/chats/${id}/messages/`, {
           headers: { Authorization: `Bearer ${session.access_token}` }
         })
         setMessages(res.data)
@@ -66,6 +70,16 @@ export default function ChatPage({ params }: { params: Promise<{ id: string }> }
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
+  // Auto-send initial query
+  useEffect(() => {
+    const q = searchParams.get('q')
+    if (q && !hasAutoSent.current) {
+      hasAutoSent.current = true
+      handleSendMessage(q, [])
+      router.replace(`/dashboard/chat/${id}`)
+    }
+  }, [searchParams, id, router])
+
   const handleSendMessage = async (query: string, documentIds: string[]) => {
     const { data: { session } } = await supabase.auth.getSession()
     if (!session) return
@@ -78,7 +92,7 @@ export default function ChatPage({ params }: { params: Promise<{ id: string }> }
     setIsTyping(true)
 
     try {
-      const response = await fetch(`http://localhost:8000/api/v1/chats/${id}/messages/`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/v1/chats/${id}/messages/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -8,7 +8,11 @@ class Settings(BaseSettings):
     API_V1_STR: str = "/api/v1"
     
     # CORS
-    BACKEND_CORS_ORIGINS: List[str] = ["http://localhost:3000"]
+    FRONTEND_URL: str = "http://localhost:3000"
+    
+    @property
+    def BACKEND_CORS_ORIGINS(self) -> List[str]:
+        return ["http://localhost:3000", self.FRONTEND_URL]
 
     # Database
     DATABASE_URL: str

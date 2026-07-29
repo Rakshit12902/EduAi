@@ -20,6 +20,7 @@ export function Sidebar() {
   const queryClient = useQueryClient()
   const [isNewChatModalOpen, setIsNewChatModalOpen] = useState(false)
   const [deletingChatId, setDeletingChatId] = useState<string | null>(null)
+  const [isCollapsed, setIsCollapsed] = useState(false)
 
   const { data: chats, isLoading, refetch } = useQuery({
     queryKey: ['chats'],
@@ -27,7 +28,7 @@ export function Sidebar() {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) throw new Error('No session')
       
-      const res = await axios.get('http://localhost:8000/api/v1/chats/', {
+      const res = await axios.get(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/v1/chats/`, {
         headers: { Authorization: `Bearer ${session.access_token}` }
       })
       return res.data as Chat[]
@@ -39,7 +40,7 @@ export function Sidebar() {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) throw new Error('No session')
 
-      await axios.delete(`http://localhost:8000/api/v1/chats/${chatId}`, {
+      await axios.delete(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/v1/chats/${chatId}`, {
         headers: { Authorization: `Bearer ${session.access_token}` }
       })
       return chatId
@@ -72,74 +73,127 @@ export function Sidebar() {
 
   return (
     <>
-      <div className="w-72 border-r border-outline-variant bg-surface-container-low h-full flex flex-col transition-all">
-        {/* Header */}
-        <div className="h-16 flex items-center px-4 border-b border-outline-variant shrink-0 justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-primary text-on-primary rounded-lg flex items-center justify-center">
-              <span className="material-symbols-outlined text-lg">school</span>
+      <div className={`${isCollapsed ? 'w-[72px]' : 'w-72'} border-r border-outline-variant bg-surface-container-lowest h-full flex flex-col transition-all duration-300 relative`}>
+        
+        {/* Header - Logo & Toggle */}
+        <div className={`pt-6 pb-4 flex flex-col ${isCollapsed ? 'items-center' : 'px-4'} gap-4 shrink-0`}>
+          {/* Logo Row */}
+          <div className={`flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'} w-full`}>
+            <div className="flex items-center gap-3 overflow-hidden">
+              <div className="w-10 h-10 shrink-0 bg-primary text-on-primary rounded-full flex items-center justify-center shadow-sm">
+                <span className="material-symbols-outlined text-[22px]">auto_awesome</span>
+              </div>
+              {!isCollapsed && <span className="font-display font-bold text-xl text-on-surface truncate">EduAI</span>}
             </div>
-            <span className="font-display font-semibold text-lg text-on-surface">EduAI</span>
+            
+            {!isCollapsed && (
+              <button 
+                onClick={() => setIsCollapsed(true)}
+                className="w-8 h-8 flex shrink-0 items-center justify-center rounded-lg text-on-surface-variant hover:bg-surface-container-highest transition-colors"
+                title="Collapse sidebar"
+              >
+                <span className="material-symbols-outlined text-[20px]">dock_to_left</span>
+              </button>
+            )}
           </div>
-        </div>
 
-        {/* Action button */}
-        <div className="p-4">
+          {/* Toggle Button when collapsed */}
+          {isCollapsed && (
+            <button 
+              onClick={() => setIsCollapsed(false)}
+              className="w-10 h-10 flex shrink-0 items-center justify-center rounded-xl text-on-surface-variant hover:bg-surface-container-highest transition-colors"
+              title="Expand sidebar"
+            >
+              <span className="material-symbols-outlined text-[20px]">dock_to_right</span>
+            </button>
+          )}
+
+          {/* Dashboard Link */}
+          <Link 
+            href="/dashboard"
+            className={`flex items-center gap-3 rounded-xl transition-colors text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest ${
+              isCollapsed ? 'w-10 h-10 justify-center' : 'w-full px-3 py-2.5'
+            } ${pathname === '/dashboard' ? 'text-primary bg-primary/10' : ''}`}
+            title="Dashboard"
+          >
+            <span className="material-symbols-outlined text-[22px]">grid_view</span>
+            {!isCollapsed && <span className="text-sm font-medium">Dashboard</span>}
+          </Link>
+          
+          {/* New Chat Button */}
           <button 
             onClick={() => setIsNewChatModalOpen(true)}
-            className="w-full flex items-center justify-center gap-2 bg-primary text-on-primary py-3 rounded-xl hover:bg-primary/90 transition-colors shadow-sm font-medium"
+            className={`flex items-center gap-3 rounded-[16px] transition-all bg-primary/10 text-primary hover:bg-primary/20 ${
+              isCollapsed ? 'w-12 h-12 justify-center mx-auto' : 'w-full px-4 py-3'
+            }`}
+            title="New Chat Slot"
           >
-            <span className="material-symbols-outlined text-xl">add</span>
-            New Chat Slot
+            <span className="material-symbols-outlined text-[22px]">add_comment</span>
+            {!isCollapsed && <span className="text-sm font-bold">New Chat</span>}
           </button>
         </div>
 
-        {/* Chat List */}
-        <div className="flex-1 overflow-y-auto px-3 py-2 space-y-1">
-          <div className="px-3 pb-2 text-xs font-semibold text-on-surface-variant uppercase tracking-wider">
-            Your Chats
-          </div>
+        {/* Separator */}
+        <div className="px-4 py-2">
+          <div className="h-[1px] w-full bg-outline-variant/50"></div>
+        </div>
+
+        {/* Chat List (History) */}
+        <div className="flex-1 overflow-y-auto px-3 py-2 space-y-1 custom-scroll">
+          {!isCollapsed && (
+            <div className="px-3 pb-2 text-xs font-semibold text-on-surface-variant uppercase tracking-wider flex items-center gap-2">
+              <span className="material-symbols-outlined text-[16px]">history</span>
+              Recent Chats
+            </div>
+          )}
           
           {isLoading ? (
-            <div className="px-3 py-4 flex justify-center">
+            <div className="py-4 flex justify-center">
               <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary"></div>
             </div>
           ) : chats?.length === 0 ? (
-            <div className="px-3 py-4 text-sm text-on-surface-variant text-center">
-              No chats yet. Create one to get started!
-            </div>
+            !isCollapsed ? (
+              <div className="px-3 py-4 text-sm text-on-surface-variant text-center opacity-60">
+                No chats yet
+              </div>
+            ) : null
           ) : (
             chats?.map((chat) => {
               const isActive = pathname === `/dashboard/chat/${chat.id}`
               const isDeleting = deletingChatId === chat.id
               return (
-                <div key={chat.id} className="group relative flex items-center">
+                <div key={chat.id} className="group relative flex items-center justify-center">
                   <Link 
                     href={`/dashboard/chat/${chat.id}`}
-                    className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors w-full pr-9 ${
+                    title={isCollapsed ? chat.title : undefined}
+                    className={`flex items-center gap-3 rounded-xl transition-colors overflow-hidden ${
+                      isCollapsed ? 'justify-center w-10 h-10' : 'w-full px-3 py-2.5 pr-9'
+                    } ${
                       isActive 
-                        ? 'bg-secondary-container text-on-secondary-container' 
-                        : 'text-on-surface-variant hover:bg-surface-container-highest'
+                        ? 'bg-secondary-container text-on-secondary-container font-medium' 
+                        : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest'
                     }`}
                   >
-                    <span className="material-symbols-outlined text-[20px]">
+                    <span className={`material-symbols-outlined text-[20px] shrink-0 ${isActive ? 'text-primary' : ''}`}>
                       chat_bubble
                     </span>
-                    <span className="truncate flex-1 text-sm font-medium">{chat.title}</span>
+                    {!isCollapsed && <span className="truncate flex-1 text-sm">{chat.title}</span>}
                   </Link>
 
-                  <button
-                    onClick={(e) => handleDeleteChat(e, chat.id)}
-                    disabled={isDeleting}
-                    title="Delete chat"
-                    className="absolute right-2 p-1.5 rounded-md text-on-surface-variant/60 hover:text-error hover:bg-error-container/40 opacity-0 group-hover:opacity-100 transition-all cursor-pointer"
-                  >
-                    {isDeleting ? (
-                      <span className="material-symbols-outlined text-[16px] animate-spin">progress_activity</span>
-                    ) : (
-                      <span className="material-symbols-outlined text-[18px]">delete</span>
-                    )}
-                  </button>
+                  {!isCollapsed && (
+                    <button
+                      onClick={(e) => handleDeleteChat(e, chat.id)}
+                      disabled={isDeleting}
+                      title="Delete chat"
+                      className="absolute right-2 p-1.5 rounded-md text-on-surface-variant/40 hover:text-error hover:bg-error-container/40 opacity-0 group-hover:opacity-100 transition-all cursor-pointer"
+                    >
+                      {isDeleting ? (
+                        <span className="material-symbols-outlined text-[16px] animate-spin">progress_activity</span>
+                      ) : (
+                        <span className="material-symbols-outlined text-[18px]">delete</span>
+                      )}
+                    </button>
+                  )}
                 </div>
               )
             })
@@ -147,14 +201,14 @@ export function Sidebar() {
         </div>
 
         {/* Footer */}
-        <div className="p-4 border-t border-outline-variant shrink-0 space-y-1">
-          <Link href="/settings" className="flex items-center gap-3 px-3 py-2 text-on-surface-variant hover:bg-surface-container-highest rounded-lg transition-colors">
-            <span className="material-symbols-outlined text-[20px]">settings</span>
-            <span className="text-sm font-medium">Settings</span>
+        <div className={`p-4 border-t border-outline-variant shrink-0 flex flex-col gap-1 ${isCollapsed ? 'items-center' : ''}`}>
+          <Link href="/settings" title="Settings" className={`flex items-center gap-3 rounded-xl transition-colors text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest ${isCollapsed ? 'justify-center w-10 h-10' : 'px-3 py-2.5'}`}>
+            <span className="material-symbols-outlined text-[22px]">settings</span>
+            {!isCollapsed && <span className="text-sm font-medium">Settings</span>}
           </Link>
-          <button onClick={handleLogout} className="w-full flex items-center gap-3 px-3 py-2 text-error hover:bg-error-container hover:text-on-error-container rounded-lg transition-colors">
-            <span className="material-symbols-outlined text-[20px]">logout</span>
-            <span className="text-sm font-medium">Log out</span>
+          <button onClick={handleLogout} title="Log out" className={`flex items-center gap-3 text-on-surface-variant hover:text-error hover:bg-error-container/50 rounded-xl transition-colors ${isCollapsed ? 'justify-center w-10 h-10' : 'w-full px-3 py-2.5'}`}>
+            <span className="material-symbols-outlined text-[22px]">logout</span>
+            {!isCollapsed && <span className="text-sm font-medium">Log out</span>}
           </button>
         </div>
       </div>
