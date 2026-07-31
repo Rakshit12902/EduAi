@@ -38,7 +38,18 @@ jobs:
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
+      - name: Check Render Deploy Hook Secret
+        id: check_secret
+        run: |
+          if [ -z "${{ secrets.RENDER_DEPLOY_HOOK }}" ]; then
+            echo "::warning::RENDER_DEPLOY_HOOK secret is not set. Skipping Render deployment trigger."
+            echo "has_secret=false" >> $GITHUB_OUTPUT
+          else
+            echo "has_secret=true" >> $GITHUB_OUTPUT
+          fi
+
       - name: Trigger Render Deployment
+        if: steps.check_secret.outputs.has_secret == 'true'
         uses: fjogeleit/http-request-action@v1
         with:
           url: ${{ secrets.RENDER_DEPLOY_HOOK }}
