@@ -205,13 +205,11 @@ async def generate_chat_stream(
             # Format messages for Gemini (it prefers a single prompt string if we aren't doing strict multi-turn parts)
             gemini_prompt = "\n".join([f"{m['role'].upper()}: {m['content']}" for m in messages])
             
-            # Use the asynchronous client under .aio and await the generator
-            response = await gemini_client.aio.models.generate_content_stream(
+            # Use the asynchronous client under .aio (do NOT await the generator creation)
+            stream = gemini_client.aio.models.generate_content_stream(
                 model='gemini-2.0-flash',
                 contents=gemini_prompt
             )
-            
-            stream = response
 
         full_response = ""
         think_filter = ThinkFilter()
