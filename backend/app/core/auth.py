@@ -7,9 +7,10 @@ from app.core.config import settings
 
 security = HTTPBearer()
 
-# Initialize the JWKS client pointing to Supabase
-jwks_url = f"{settings.SUPABASE_URL}/rest/v1/jwks"
+# Initialize the JWKS client pointing to Supabase GoTrue Auth
+jwks_url = f"{settings.SUPABASE_URL}/auth/v1/.well-known/jwks.json"
 jwks_client = PyJWKClient(jwks_url)
+
 
 def verify_supabase_token(credentials: HTTPAuthorizationCredentials = Depends(security)) -> dict:
     token = credentials.credentials
