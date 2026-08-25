@@ -162,6 +162,14 @@ async def generate_chat_stream(
                 if u_settings.language:
                     user_lang = u_settings.language.value if hasattr(u_settings.language, 'value') else str(u_settings.language)
 
+        # Map UI models to valid Groq models
+        GROQ_MODEL_MAP = {
+            "qwen/qwen3.6-27b": "llama-3.3-70b-versatile",
+            "openai/gpt-oss-120b": "llama-3.3-70b-versatile",
+            "openai/gpt-oss-20b": "llama-3.1-8b-instant",
+        }
+        resolved_groq_model = GROQ_MODEL_MAP.get(user_model, user_model)
+
         # Build prompt with user language preference
         messages = build_prompt(query=query, context_chunks=top_chunks, history=history, language=user_lang)
 
@@ -169,7 +177,7 @@ async def generate_chat_stream(
         try:
             stream = await groq_client.chat.completions.create(
                 messages=messages,
-                model=user_model,
+                model=resolved_groq_model,
                 temperature=user_temp,
                 max_tokens=2048,
                 stream=True
@@ -179,7 +187,7 @@ async def generate_chat_stream(
             logging.getLogger(__name__).warning(f"Groq API failed ({groq_err}). Falling back to Gemini Flash...")
             
             if not settings.GEMINI_API_KEY:
-                raise Exception("Groq failed and no Gemini fallback API key provided.")
+                raise Exception(f"Groq failed ({groq_err}) and no Gemini fallback API key provided.")
                 
             from google import genai
             gemini_client = genai.Client(api_key=settings.GEMINI_API_KEY)
@@ -187,8 +195,8 @@ async def generate_chat_stream(
             # Format messages for Gemini (it prefers a single prompt string if we aren't doing strict multi-turn parts)
             gemini_prompt = "\n".join([f"{m['role'].upper()}: {m['content']}" for m in messages])
             
-            # Use the asynchronous client under .aio
-            response = gemini_client.aio.models.generate_content_stream(
+            # Use the asynchronous client under .aio and await the generator
+            response = await gemini_client.aio.models.generate_content_stream(
                 model='gemini-2.0-flash',
                 contents=gemini_prompt
             )
@@ -307,7 +315,7 @@ async def stream_chat(
 
     history = [{"role": msg.role.value, "content": msg.content} for msg in db_history]
 
-    # Return SSE Response
+    # Return SSE Response with proper anti-buffering headers
     return StreamingResponse(
         generate_chat_stream(
             db_session_factory=AsyncSessionLocal,
@@ -316,5 +324,10 @@ async def stream_chat(
             query=message_in.content,
             history=history
         ),
-        media_type="text/event-stream"
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache, no-transform",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no"
+        }
     )

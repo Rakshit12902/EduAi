@@ -101,45 +101,75 @@ export default function ChatPage({ params }: { params: Promise<{ id: string }> }
         body: JSON.stringify({ role: 'user', content: query })
       })
 
-      if (!response.body) throw new Error('No response body')
+      if (!response.ok) {
+        const errorText = await response.text()
+        throw new Error(`Server returned ${response.status}: ${errorText}`)
+      }
+
+      if (!response.body) throw new Error('No response body received from server')
 
       const reader = response.body.getReader()
-      const decoder = new TextDecoder()
+      const decoder = new TextDecoder('utf-8')
+      let buffer = ''
       
       while (true) {
         const { value, done } = await reader.read()
         if (done) break
         
-        const chunk = decoder.decode(value, { stream: true })
-        const lines = chunk.split('\n')
+        buffer += decoder.decode(value, { stream: true })
+        const lines = buffer.split('\n')
+        // Keep uncompleted partial line at the end of buffer
+        buffer = lines.pop() || ''
         
         for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            const dataStr = line.substring(6)
+          const trimmed = line.trim()
+          if (!trimmed || trimmed.startsWith(':')) continue
+          
+          if (trimmed.startsWith('data: ')) {
+            const dataStr = trimmed.substring(6).trim()
             if (dataStr === '[DONE]') break
             
             try {
               const data = JSON.parse(dataStr)
               
-              if (data.type === 'sources') {
+              if (data.error) {
+                setMessages(prev => prev.map(msg => 
+                  msg.id === tempAssistantId 
+                    ? { ...msg, content: (msg.content ? msg.content + '\n\n' : '') + `**Error:** ${data.error}` } 
+                    : msg
+                ))
+              } else if (data.type === 'sources') {
                 setMessages(prev => prev.map(msg => 
                   msg.id === tempAssistantId ? { ...msg, sources: data.sources, answer_type: data.answer_type } : msg
                 ))
-              } else if (data.type === 'token') {
+              } else if (data.type === 'token' && data.text) {
                 setMessages(prev => prev.map(msg => 
                   msg.id === tempAssistantId ? { ...msg, content: msg.content + data.text } : msg
                 ))
               }
             } catch (e) {
-              console.error("Error parsing SSE JSON", e)
+              console.error("Error parsing SSE JSON chunk:", dataStr, e)
             }
           }
         }
       }
-    } catch (error) {
+      
+      // Sync complete message list from database after streaming completes
+      try {
+        const res = await axios.get(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/v1/chats/${id}/messages/`, {
+          headers: { Authorization: `Bearer ${session.access_token}` }
+        })
+        if (res.data && res.data.length > 0) {
+          setMessages(res.data)
+        }
+      } catch (syncErr) {
+        console.error("Failed to sync final messages from server:", syncErr)
+      }
+
+    } catch (error: any) {
       console.error("Chat streaming error:", error)
       setMessages(prev => prev.map(msg => 
-        msg.id === tempAssistantId ? { ...msg, content: msg.content + "\n\n**Error:** Failed to connect to server." } : msg
+        msg.id === tempAssistantId ? { ...msg, content: msg.content + `\n\n**Error:** Failed to connect to server: ${error?.message || error}` } : msg
       ))
     } finally {
       setIsTyping(false)
