@@ -207,7 +207,7 @@ async def generate_chat_stream(
             
             # Use the asynchronous client under .aio (do NOT await the generator creation)
             stream = gemini_client.aio.models.generate_content_stream(
-                model='gemini-2.0-flash',
+                model='gemini-3.6-flash',
                 contents=gemini_prompt
             )
 
