@@ -12,7 +12,7 @@ class Settings(BaseSettings):
     
     @property
     def BACKEND_CORS_ORIGINS(self) -> List[str]:
-        return ["http://localhost:3000", self.FRONTEND_URL]
+        return list(set(["http://localhost:3000", self.FRONTEND_URL]))
 
     # Database
     DATABASE_URL: str
@@ -26,8 +26,8 @@ class Settings(BaseSettings):
     GROQ_API_KEY: str
     GEMINI_API_KEY: str = ""
     
-    # Redis
-    REDIS_URL: str
+    # Redis (optional — kept for future use)
+    REDIS_URL: str = ""
     
     # Qdrant
     QDRANT_URL: str

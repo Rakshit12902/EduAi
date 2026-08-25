@@ -162,13 +162,23 @@ async def generate_chat_stream(
                 if u_settings.language:
                     user_lang = u_settings.language.value if hasattr(u_settings.language, 'value') else str(u_settings.language)
 
-        # Map UI models to valid Groq models
+        # Allowlist of valid Groq model identifiers — prevents LLM model injection
+        ALLOWED_GROQ_MODELS = {
+            "llama-3.3-70b-versatile",
+            "llama-3.1-8b-instant",
+            "deepseek-r1-distill-llama-70b",
+            "gemma2-9b-it",
+        }
+        # Map legacy/UI model names to valid Groq models
         GROQ_MODEL_MAP = {
             "qwen/qwen3.6-27b": "llama-3.3-70b-versatile",
             "openai/gpt-oss-120b": "llama-3.3-70b-versatile",
             "openai/gpt-oss-20b": "llama-3.1-8b-instant",
         }
         resolved_groq_model = GROQ_MODEL_MAP.get(user_model, user_model)
+        # Fall back to a safe default if the resolved model is not in the allowlist
+        if resolved_groq_model not in ALLOWED_GROQ_MODELS:
+            resolved_groq_model = "llama-3.3-70b-versatile"
 
         # Build prompt with user language preference
         messages = build_prompt(query=query, context_chunks=top_chunks, history=history, language=user_lang)
@@ -249,7 +259,7 @@ async def generate_chat_stream(
                 "relevance_score": getattr(chunk, "score", 0.0)
             })
 
-        # Yield final payload
+        # Yield sources payload
         final_payload = json.dumps({
             "type": "sources",
             "done": True,
@@ -257,8 +267,12 @@ async def generate_chat_stream(
             "sources": sources_payload
         })
         yield f"data: {final_payload}\n\n"
+        
+        # Signal end of stream
+        yield "data: [DONE]\n\n"
 
-        # 4. Save assistant message and sources to DB
+        # 4. Save assistant message and sources to DB, then update chat timestamp
+        from datetime import datetime, timezone
         async with db_session_factory() as db:
             assistant_message = Message(
                 chat_id=chat_id,
@@ -280,6 +294,14 @@ async def generate_chat_stream(
                     excerpt=src["excerpt"]
                 )
                 db.add(db_source)
+
+            # Update chat's last_message_at so sidebar sorts correctly
+            chat_result = await db.execute(select(Chat).where(Chat.id == chat_id))
+            chat_obj = chat_result.scalars().first()
+            if chat_obj:
+                chat_obj.last_message_at = datetime.now(timezone.utc)
+                db.add(chat_obj)
+
             await db.commit()
 
     except Exception as e:

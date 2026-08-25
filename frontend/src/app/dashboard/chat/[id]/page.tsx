@@ -1,6 +1,6 @@
 'use client'
 
-import { use, useState, useEffect, useRef } from 'react'
+import { use, useState, useEffect, useRef, useCallback } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { useQuery } from '@tanstack/react-query'
 import axios from 'axios'
@@ -32,6 +32,8 @@ export default function ChatPage({ params }: { params: Promise<{ id: string }> }
   const [isTyping, setIsTyping] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const hasAutoSent = useRef(false)
+  // Guard: prevents fetchMessages from overwriting an in-progress stream
+  const isStreamingRef = useRef(false)
 
   const { data: chats } = useQuery({
     queryKey: ['chats'],
@@ -48,16 +50,22 @@ export default function ChatPage({ params }: { params: Promise<{ id: string }> }
 
   const chat = chats?.find((c) => c.id === id)
 
-  // Fetch existing messages
+  // Fetch existing messages — skips if a stream is currently running to prevent race
   useEffect(() => {
     const fetchMessages = async () => {
+      // Don't overwrite live streaming messages with a stale DB fetch
+      if (isStreamingRef.current) return
+
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) return
       try {
         const res = await axios.get(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/v1/chats/${id}/messages/`, {
           headers: { Authorization: `Bearer ${session.access_token}` }
         })
-        setMessages(res.data)
+        // Only update if we are still not streaming (stream could have started while GET was in-flight)
+        if (!isStreamingRef.current) {
+          setMessages(res.data)
+        }
       } catch (err) {
         console.error("Failed to fetch messages:", err)
       }
@@ -70,17 +78,7 @@ export default function ChatPage({ params }: { params: Promise<{ id: string }> }
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
-  // Auto-send initial query
-  useEffect(() => {
-    const q = searchParams.get('q')
-    if (q && !hasAutoSent.current) {
-      hasAutoSent.current = true
-      handleSendMessage(q, [])
-      router.replace(`/dashboard/chat/${id}`)
-    }
-  }, [searchParams, id, router])
-
-  const handleSendMessage = async (query: string, documentIds: string[]) => {
+  const handleSendMessage = useCallback(async (query: string, documentIds: string[], replaceUrl?: string) => {
     const { data: { session } } = await supabase.auth.getSession()
     if (!session) return
 
@@ -90,6 +88,12 @@ export default function ChatPage({ params }: { params: Promise<{ id: string }> }
     const tempAssistantId = (Date.now() + 1).toString()
     setMessages(prev => [...prev, { id: tempAssistantId, role: 'assistant', content: '', sources: [] }])
     setIsTyping(true)
+    isStreamingRef.current = true
+
+    // Defer URL cleanup until after stream is fully set up to avoid mid-stream re-renders
+    if (replaceUrl) {
+      router.replace(replaceUrl)
+    }
 
     try {
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/v1/chats/${id}/messages/`, {
@@ -172,9 +176,21 @@ export default function ChatPage({ params }: { params: Promise<{ id: string }> }
         msg.id === tempAssistantId ? { ...msg, content: msg.content + `\n\n**Error:** Failed to connect to server: ${error?.message || error}` } : msg
       ))
     } finally {
+      isStreamingRef.current = false
       setIsTyping(false)
     }
-  }
+  }, [id, router])
+
+  // Auto-send initial query from dashboard navigation (?q=...)
+  useEffect(() => {
+    const q = searchParams.get('q')
+    if (q && !hasAutoSent.current) {
+      hasAutoSent.current = true
+      // Pass the URL to clean up as a param so router.replace runs AFTER
+      // isStreamingRef is set, preventing fetchMessages from racing
+      handleSendMessage(q, [], `/dashboard/chat/${id}`)
+    }
+  }, [searchParams, id, handleSendMessage])
 
   return (
     <div className="flex-1 flex flex-col h-full bg-surface-container-lowest relative">

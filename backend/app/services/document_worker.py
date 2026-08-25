@@ -162,11 +162,15 @@ async def process_document_async(document_id: str):
             if doc:
                 doc.status = DocumentStatus.FAILED
                 doc.error_message = str(e)
+                db.add(doc)
                 
             job_result = await db.execute(select(ProcessingJob).where(ProcessingJob.document_id == doc_uuid))
             job = job_result.scalars().first()
             if job:
-                await update_job_status(db, job.id, JobStatus.FAILED, job.progress, "Failed", str(e))
+                job.status = JobStatus.FAILED
+                job.current_step = "Failed"
+                job.error_message = str(e)
+                db.add(job)
                 
             await db.commit()
             

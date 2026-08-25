@@ -70,10 +70,10 @@ export default function ChatInput({ chatId, onUploadSuccess, onSendMessage, disa
   }
 
   const handleSend = () => {
+    if (!query.trim()) return  // Never send empty messages
     if (onSendMessage) {
       onSendMessage(query, uploadedFiles.map(f => f.id))
     }
-    console.log("Sending query:", query, "with attachments:", uploadedFiles)
     setQuery('')
     setUploadedFiles([]) // Clear attachments after sending
   }

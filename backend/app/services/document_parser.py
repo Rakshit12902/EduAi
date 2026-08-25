@@ -2,7 +2,6 @@ import fitz  # PyMuPDF
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 import logging
 import time
-import base64
 from PIL import Image
 import io
 from app.core.config import settings
@@ -36,7 +35,6 @@ def describe_image_multimodal(image_bytes: bytes) -> str:
         except Exception as e:
             logger.error(f"Error in Gemini Multimodal Vision: {e}")
 
-    return ""
     return ""
 
 def extract_text_from_image(file_path: str) -> str:

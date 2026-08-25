@@ -40,12 +40,6 @@ async def get_current_user(
         full_name = user_meta.get("full_name") or user_meta.get("name") or email.split("@")[0]
         avatar_url = user_meta.get("avatar_url") or user_meta.get("picture")
 
-        # Check if another user profile with same email exists
-        result_email = await db.execute(select(UserProfile).where(UserProfile.email == email))
-        user_by_email = result_email.scalars().first()
-        if user_by_email:
-            return user_by_email
-
         user = UserProfile(
             id=user_uuid,
             email=email,
@@ -58,6 +52,7 @@ async def get_current_user(
             await db.refresh(user)
         except Exception as e:
             await db.rollback()
+            # Re-fetch in case of concurrent insert (race condition on first login)
             result = await db.execute(select(UserProfile).where(UserProfile.id == user_uuid))
             user = result.scalars().first()
             if not user:

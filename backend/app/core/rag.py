@@ -18,7 +18,7 @@ async def embed_query(query: str) -> List[float]:
     """Embed the user's query using Google's text-embedding-004 API."""
     if not settings.GEMINI_API_KEY:
         logger.warning("No GEMINI_API_KEY provided. Returning zero-vector fallback for RAG.")
-        return [0.0] * 384 # Fallback dimension length
+        return [0.0] * 3072  # Must match Qdrant collection size (3072)
         
     from google import genai
     client = genai.Client(api_key=settings.GEMINI_API_KEY)

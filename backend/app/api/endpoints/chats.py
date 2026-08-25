@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy import desc
@@ -30,8 +30,8 @@ async def create_chat(
 
 @router.get("/", response_model=List[ChatResponse])
 async def read_chats(
-    skip: int = 0,
-    limit: int = 100,
+    skip: int = Query(default=0, ge=0),
+    limit: int = Query(default=20, ge=1, le=100),
     include_archived: bool = False,
     db: AsyncSession = Depends(get_db),
     current_user: UserProfile = Depends(get_current_user)

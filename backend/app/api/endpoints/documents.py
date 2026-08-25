@@ -7,6 +7,7 @@ from app.models.document import Document, ProcessingJob
 from app.models.enums import DocumentStatus, JobStatus
 from app.core.aws import upload_file_to_s3
 import uuid
+import os
 import logging
 
 logger = logging.getLogger(__name__)
@@ -46,7 +47,7 @@ async def upload_document(
     if file.content_type not in ALLOWED_MIME_TYPES:
         raise HTTPException(status_code=415, detail="Unsupported file format")
         
-    # 3. Validate file size (by reading content into memory, or checking headers if possible, but reading is safer for accurate size)
+    # 3. Validate file size
     content = await file.read()
     file_size = len(content)
     if file_size > MAX_FILE_SIZE_BYTES:
@@ -55,22 +56,27 @@ async def upload_document(
     # Reset file pointer after reading
     await file.seek(0)
     
-    # 4. Generate Document ID and Upload to S3
+    # 4. Sanitize filename — strip any path traversal sequences (e.g. ../../etc/passwd)
+    safe_filename = os.path.basename(file.filename or "upload").strip()
+    if not safe_filename:
+        safe_filename = "upload"
+
+    # 5. Generate Document ID and Upload to S3
     document_id = str(uuid.uuid4())
     try:
-        s3_path = upload_file_to_s3(file.file, user_id, chat_id, document_id, file.filename)
+        s3_path = upload_file_to_s3(file.file, user_id, chat_id, document_id, safe_filename)
     except Exception as e:
         logger.error(f"S3 Upload Error: {e}")
         raise HTTPException(status_code=500, detail="Failed to upload file to storage")
         
-    # 5. Insert Document into Database
+    # 6. Insert Document into Database
     new_document = Document(
         id=document_id,
         chat_id=chat_id,
         user_id=user_id,
-        filename=file.filename,
-        original_filename=file.filename,
-        file_type=file.filename.split('.')[-1] if '.' in file.filename else "unknown",
+        filename=safe_filename,
+        original_filename=safe_filename,
+        file_type=safe_filename.split('.')[-1].lower() if '.' in safe_filename else "unknown",
         mime_type=file.content_type,
         file_size=file_size,
         storage_path=s3_path,
@@ -79,7 +85,7 @@ async def upload_document(
     db.add(new_document)
     await db.commit()
     
-    # 6. Insert ProcessingJob
+    # 7. Insert ProcessingJob
     new_job = ProcessingJob(
         document_id=document_id,
         status=JobStatus.QUEUED,
@@ -88,13 +94,13 @@ async def upload_document(
     db.add(new_job)
     await db.commit()
     
-    # 7. Dispatch FastAPI Background Task
+    # 8. Dispatch FastAPI Background Task
     from app.services.document_worker import process_document_async
     background_tasks.add_task(process_document_async, document_id)
     
     return {
         "document_id": document_id,
-        "filename": file.filename,
+        "filename": safe_filename,
         "status": "QUEUED",
         "job_id": new_job.id
     }

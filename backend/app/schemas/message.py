@@ -1,5 +1,5 @@
 from typing import List, Optional
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 from uuid import UUID
 from datetime import datetime
 from app.models.enums import MessageRole, AnswerType
@@ -16,7 +16,7 @@ class MessageSourceSchema(BaseModel):
 
 class MessageBase(BaseModel):
     role: MessageRole
-    content: str
+    content: str = Field(..., min_length=1, max_length=32000)
 
 class MessageCreate(MessageBase):
     pass
