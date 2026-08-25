@@ -34,7 +34,7 @@ def verify_supabase_token(credentials: HTTPAuthorizationCredentials = Depends(se
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid or expired authentication token",
+            detail=f"Token verification failed: {str(e)}",
             headers={"WWW-Authenticate": "Bearer"},
         )
 
