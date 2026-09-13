@@ -53,20 +53,25 @@ export default function ChatPage({ params }: { params: Promise<{ id: string }> }
     })
   }, [])
 
-  const { data: chats } = useQuery({
-    queryKey: ['chats'],
+  const { data: chat, isError } = useQuery({
+    queryKey: ['chat', id],
     queryFn: async () => {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) throw new Error('No session')
       
-      const res = await axios.get(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/v1/chats/`, {
+      const res = await axios.get(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/v1/chats/${id}`, {
         headers: { Authorization: `Bearer ${session.access_token}` }
       })
-      return res.data as Chat[]
-    }
+      return res.data as Chat
+    },
+    retry: 1
   })
 
-  const chat = chats?.find((c) => c.id === id)
+  useEffect(() => {
+    if (isError) {
+      router.push('/dashboard')
+    }
+  }, [isError, router])
 
   useEffect(() => {
     if (chat?.title) {
@@ -85,6 +90,7 @@ export default function ChatPage({ params }: { params: Promise<{ id: string }> }
       )
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['chat', id] })
       queryClient.invalidateQueries({ queryKey: ['chats'] })
       setIsEditingTitle(false)
     }
@@ -254,7 +260,7 @@ export default function ChatPage({ params }: { params: Promise<{ id: string }> }
               />
             ) : (
               <h1 className="font-bold text-sm sm:text-base text-slate-900 dark:text-slate-100 truncate max-w-xs sm:max-w-md">
-                {chat ? chat.title : 'meka naam kya hai'}
+                {chat ? chat.title : 'New Chat'}
               </h1>
             )}
 

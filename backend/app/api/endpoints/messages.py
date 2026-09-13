@@ -73,6 +73,7 @@ class ThinkFilter:
 from sqlalchemy.orm import selectinload
 
 @router.get("/", response_model=List[MessageResponse])
+@router.get("", include_in_schema=False, response_model=List[MessageResponse])
 async def get_messages(
     chat_id: str,
     db: AsyncSession = Depends(get_db),
@@ -133,18 +134,23 @@ async def generate_chat_stream(
                 latest_doc_filename = latest_doc.filename
 
         # Embed query
-        query_vector = await embed_query(query)
-        
-        # Retrieve chunks from Qdrant
-        search_query = query
-        if latest_doc_filename and latest_doc_filename.lower() not in query.lower():
-            # Append filename to internal retrieval query to trigger explicit filename matching
-            search_query = f"{query} {latest_doc_filename}"
+        try:
+            query_vector = await embed_query(query)
             
-        retrieved_chunks = await retrieve_chunks(user_id=str(user_id), chat_id=str(chat_id), query_vector=query_vector, query=search_query, top_k=20)
-        
-        # Rerank chunks
-        top_chunks = await rerank_chunks(query=query, chunks=retrieved_chunks, top_n=5)
+            # Retrieve chunks from Qdrant
+            search_query = query
+            if latest_doc_filename and latest_doc_filename.lower() not in query.lower():
+                # Append filename to internal retrieval query to trigger explicit filename matching
+                search_query = f"{query} {latest_doc_filename}"
+                
+            retrieved_chunks = await retrieve_chunks(user_id=str(user_id), chat_id=str(chat_id), query_vector=query_vector, query=search_query, top_k=20)
+            
+            # Rerank chunks
+            top_chunks = await rerank_chunks(query=query, chunks=retrieved_chunks, top_n=5)
+        except Exception as rag_err:
+            import logging
+            logging.getLogger(__name__).warning(f"RAG retrieval warning, falling back to general knowledge: {rag_err}")
+            top_chunks = []
         
         # Fetch user settings for model, temperature & language
         user_model = "llama-3.3-70b-versatile"
@@ -207,7 +213,7 @@ async def generate_chat_stream(
             
             # Use the asynchronous client under .aio (do NOT await the generator creation)
             stream = gemini_client.aio.models.generate_content_stream(
-                model='gemini-3.6-flash',
+                model='gemini-2.5-flash',
                 contents=gemini_prompt
             )
 
@@ -309,12 +315,14 @@ async def generate_chat_stream(
             await db.commit()
 
     except Exception as e:
-        import traceback
-        traceback.print_exc()
-        error_payload = json.dumps({"error": str(e)})
+        import logging
+        logging.getLogger(__name__).error(f"Chat streaming generation error: {e}", exc_info=True)
+        safe_error_msg = "An error occurred while generating the response. Please try again."
+        error_payload = json.dumps({"error": safe_error_msg})
         yield f"data: {error_payload}\n\n"
 
 @router.post("/")
+@router.post("", include_in_schema=False)
 async def stream_chat(
     chat_id: str,
     message_in: MessageCreate,

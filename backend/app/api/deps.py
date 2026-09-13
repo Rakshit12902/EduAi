@@ -56,6 +56,8 @@ async def get_current_user(
             result = await db.execute(select(UserProfile).where(UserProfile.id == user_uuid))
             user = result.scalars().first()
             if not user:
-                raise HTTPException(status_code=500, detail=f"Failed to auto-create user profile: {str(e)}")
+                import logging
+                logging.getLogger(__name__).error(f"Failed to auto-create user profile: {e}", exc_info=True)
+                raise HTTPException(status_code=500, detail="Failed to initialize user profile")
 
     return user

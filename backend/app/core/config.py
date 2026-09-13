@@ -12,7 +12,7 @@ class Settings(BaseSettings):
     
     @property
     def BACKEND_CORS_ORIGINS(self) -> List[str]:
-        return list(set(["http://localhost:3000", self.FRONTEND_URL]))
+        return list(set(["http://localhost:3000", "http://127.0.0.1:3000", self.FRONTEND_URL]))
 
     # Database
     DATABASE_URL: str

@@ -28,8 +28,9 @@ ALLOWED_MIME_TYPES = [
 ]
 
 @router.post("/chats/{chat_id}/documents", status_code=status.HTTP_201_CREATED)
+@router.post("/chats/{chat_id}/documents/", status_code=status.HTTP_201_CREATED, include_in_schema=False)
 async def upload_document(
-    chat_id: str,
+    chat_id: uuid.UUID,
     background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     db: AsyncSession = Depends(get_db),
@@ -106,8 +107,9 @@ async def upload_document(
     }
 
 @router.get("/documents/{document_id}/status")
+@router.get("/documents/{document_id}/status/", include_in_schema=False)
 async def get_document_status(
-    document_id: str,
+    document_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
     current_user = Depends(get_current_user)
 ):

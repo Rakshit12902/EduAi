@@ -108,9 +108,14 @@ export default function HistoryPage() {
     createChatMutation.mutate()
   }
 
-  // Fetch current user details
+  // Auth guard and fetch current user details
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session) {
+        router.push('/login')
+        return
+      }
+      const user = session.user
       if (user?.user_metadata?.full_name) {
         setUserName(user.user_metadata.full_name.split(' ')[0])
       } else if (user?.email) {
@@ -118,7 +123,7 @@ export default function HistoryPage() {
         setUserName(namePart.charAt(0).toUpperCase() + namePart.slice(1))
       }
     })
-  }, [])
+  }, [router])
 
   // Dynamic Query to fetch all real user chats
   const { data: chats, isLoading, refetch } = useQuery<Chat[]>({

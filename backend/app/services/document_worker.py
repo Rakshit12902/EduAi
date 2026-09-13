@@ -6,7 +6,7 @@ import logging
 from app.core.config import settings
 from app.core.aws import download_file_from_s3
 from app.core.qdrant import qdrant_client, COLLECTION_NAME
-from app.services.document_parser import extract_text_from_pdf, extract_text_from_txt, extract_text_from_image, chunk_text
+from app.services.document_parser import extract_text_from_pdf, extract_text_from_txt, extract_text_from_docx, extract_text_from_image, chunk_text
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from app.db.session import AsyncSessionLocal
@@ -84,6 +84,8 @@ async def process_document_async(document_id: str):
                     text = await loop.run_in_executor(None, extract_text_from_pdf, local_path)
                 elif ext in ['txt', 'md']:
                     text = await loop.run_in_executor(None, extract_text_from_txt, local_path)
+                elif ext == 'docx':
+                    text = await loop.run_in_executor(None, extract_text_from_docx, local_path)
                 elif ext in ['png', 'jpg', 'jpeg', 'webp']:
                     text = await loop.run_in_executor(None, extract_text_from_image, local_path)
                 else:

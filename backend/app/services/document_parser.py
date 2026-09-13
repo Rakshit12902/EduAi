@@ -123,12 +123,29 @@ def extract_text_from_pdf(file_path: str) -> str:
         raise e
     return text
 
+import zipfile
+import xml.etree.ElementTree as ET
+
+def extract_text_from_docx(file_path: str) -> str:
+    """
+    Extracts text from a DOCX file using standard library zipfile and XML parsing.
+    """
+    try:
+        with zipfile.ZipFile(file_path) as z:
+            xml_content = z.read("word/document.xml")
+            tree = ET.fromstring(xml_content)
+            texts = [elem.text for elem in tree.iter() if elem.text and elem.tag.endswith('}t')]
+            return "\n".join(texts)
+    except Exception as e:
+        logger.error(f"Error reading DOCX {file_path}: {e}")
+        raise e
+
 def extract_text_from_txt(file_path: str) -> str:
     """
     Extracts text from a plain text file.
     """
     try:
-        with open(file_path, "r", encoding="utf-8") as f:
+        with open(file_path, "r", encoding="utf-8", errors="replace") as f:
             return f.read()
     except Exception as e:
         logger.error(f"Error reading TXT {file_path}: {e}")

@@ -33,9 +33,11 @@ def verify_supabase_token(credentials: HTTPAuthorizationCredentials = Depends(se
         )
         return payload
     except Exception as e:
+        import logging
+        logging.getLogger(__name__).warning(f"Token verification failed: {e}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=f"Token verification failed: {str(e)}",
+            detail="Could not validate credentials",
             headers={"WWW-Authenticate": "Bearer"},
         )
 

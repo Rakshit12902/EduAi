@@ -67,6 +67,22 @@ async def update_chat(
     await db.refresh(chat)
     return chat
 
+import logging
+
+logger = logging.getLogger(__name__)
+
+@router.get("/{chat_id}", response_model=ChatResponse)
+async def read_chat(
+    chat_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: UserProfile = Depends(get_current_user)
+):
+    result = await db.execute(select(Chat).where(Chat.id == chat_id, Chat.user_id == current_user.id))
+    chat = result.scalars().first()
+    if not chat:
+        raise HTTPException(status_code=404, detail="Chat not found")
+    return chat
+
 @router.delete("/{chat_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_chat(
     chat_id: uuid.UUID,
@@ -78,6 +94,28 @@ async def delete_chat(
     if not chat:
         raise HTTPException(status_code=404, detail="Chat not found")
         
+    # Delete uploaded document files from S3
+    try:
+        from app.core.aws import delete_s3_prefix
+        delete_s3_prefix(f"{current_user.id}/{chat_id}")
+    except Exception as e:
+        logger.error(f"Error cleaning up S3 storage for chat {chat_id}: {e}")
+
+    # Delete vector points from Qdrant
+    try:
+        from app.core.qdrant import qdrant_client, COLLECTION_NAME
+        from qdrant_client.http.models import Filter, FieldCondition, MatchValue
+        await qdrant_client.delete(
+            collection_name=COLLECTION_NAME,
+            points_selector=Filter(
+                must=[
+                    FieldCondition(key="chat_id", match=MatchValue(value=str(chat_id)))
+                ]
+            )
+        )
+    except Exception as e:
+        logger.error(f"Error cleaning up Qdrant vectors for chat {chat_id}: {e}")
+
     await db.delete(chat)
     await db.commit()
     return None

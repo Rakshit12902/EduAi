@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import axios from 'axios'
 import { supabase } from '@/lib/supabase'
@@ -22,6 +23,7 @@ type UserSettings = {
 }
 
 export default function SettingsPage() {
+  const router = useRouter()
   const { theme, setTheme, accentColor, setAccentColor, resolvedTheme, activePalette } = useTheme()
   const queryClient = useQueryClient()
   const [selectedTheme, setSelectedTheme] = useState<Theme>(theme)
@@ -30,6 +32,15 @@ export default function SettingsPage() {
   const [temperature, setTemperature] = useState(0.95)
   const [language, setLanguage] = useState('en')
   const [saveStatus, setSaveStatus] = useState<string | null>(null)
+
+  // Auth guard
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session) {
+        router.push('/login')
+      }
+    })
+  }, [router])
 
   // Sync selectedTheme when theme from context changes
   useEffect(() => {
