@@ -1,7 +1,7 @@
 import json
 import asyncio
 import re
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -91,7 +91,10 @@ async def get_messages(
     result = await db.execute(
         select(Message)
         .where(Message.chat_id == chat_id)
-        .options(selectinload(Message.sources).selectinload(MessageSource.document))
+        .options(
+            selectinload(Message.sources).selectinload(MessageSource.document),
+            selectinload(Message.feedback)
+        )
         .order_by(Message.created_at.asc())
     )
     raw_messages = result.scalars().all()
@@ -402,3 +405,55 @@ async def stream_chat(
             "X-Accel-Buffering": "no"
         }
     )
+
+from pydantic import BaseModel
+
+class FeedbackIn(BaseModel):
+    rating: int  # 1 for up, -1 for down, 0 to clear
+    comment: Optional[str] = None
+
+@router.post("/{message_id}/feedback")
+async def submit_feedback(
+    chat_id: str,
+    message_id: str,
+    feedback_in: FeedbackIn,
+    db: AsyncSession = Depends(get_db),
+    current_user: UserProfile = Depends(get_current_user)
+):
+    """Save or update thumbs up/down feedback for an assistant message."""
+    # Validate chat ownership
+    chat_res = await db.execute(select(Chat).where(Chat.id == chat_id, Chat.user_id == current_user.id))
+    if not chat_res.scalars().first():
+        raise HTTPException(status_code=404, detail="Chat not found")
+
+    msg_res = await db.execute(select(Message).where(Message.id == message_id, Message.chat_id == chat_id))
+    msg = msg_res.scalars().first()
+    if not msg:
+        raise HTTPException(status_code=404, detail="Message not found")
+
+    from app.models.message import Feedback
+    fb_res = await db.execute(
+        select(Feedback).where(Feedback.message_id == message_id, Feedback.user_id == current_user.id)
+    )
+    existing_fb = fb_res.scalars().first()
+
+    if feedback_in.rating == 0:
+        if existing_fb:
+            await db.delete(existing_fb)
+            await db.commit()
+        return {"status": "cleared"}
+
+    if existing_fb:
+        existing_fb.rating = feedback_in.rating
+        existing_fb.comment = feedback_in.comment
+    else:
+        new_fb = Feedback(
+            message_id=msg.id,
+            user_id=current_user.id,
+            rating=feedback_in.rating,
+            comment=feedback_in.comment
+        )
+        db.add(new_fb)
+
+    await db.commit()
+    return {"status": "ok", "rating": feedback_in.rating}

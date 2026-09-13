@@ -22,6 +22,7 @@ type Message = {
   role: 'user' | 'assistant'
   content: string
   answer_type?: 'document' | 'general'
+  feedback_rating?: number | null
   sources?: MessageSource[]
 }
 
@@ -233,6 +234,17 @@ export default function ChatPage({ params }: { params: Promise<{ id: string }> }
     }
   }, [id, router])
 
+  const handleRegenerate = useCallback((assistantIndex: number) => {
+    if (isTyping) return
+    for (let i = assistantIndex - 1; i >= 0; i--) {
+      if (messages[i].role === 'user') {
+        const queryText = messages[i].content
+        handleSendMessage(queryText, [])
+        break
+      }
+    }
+  }, [messages, isTyping, handleSendMessage])
+
   // Auto-send initial query from dashboard navigation (?q=...)
   useEffect(() => {
     const q = searchParams.get('q')
@@ -332,13 +344,18 @@ export default function ChatPage({ params }: { params: Promise<{ id: string }> }
           </div>
         ) : (
           <div className="w-full max-w-3xl xl:max-w-4xl mx-auto flex flex-col pb-4">
-            {messages.map((msg) => (
+            {messages.map((msg, idx) => (
               <ChatMessage 
                 key={msg.id} 
+                id={msg.id}
+                chatId={id}
                 role={msg.role} 
                 content={msg.content} 
                 answer_type={msg.answer_type} 
                 sources={msg.sources} 
+                initialFeedback={msg.feedback_rating}
+                onRegenerate={() => handleRegenerate(idx)}
+                isRegenerating={isTyping && idx === messages.length - 1}
               />
             ))}
             <div ref={messagesEndRef} />

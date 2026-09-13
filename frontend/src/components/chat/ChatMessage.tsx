@@ -1,4 +1,6 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
+import axios from 'axios'
+import { supabase } from '@/lib/supabase'
 
 export interface MessageSource {
   document_id: string
@@ -9,10 +11,15 @@ export interface MessageSource {
 }
 
 interface ChatMessageProps {
+  id?: string
+  chatId?: string
   role: 'user' | 'assistant'
   content: string
   answer_type?: 'document' | 'general'
   sources?: MessageSource[]
+  initialFeedback?: number | null
+  onRegenerate?: () => void
+  isRegenerating?: boolean
 }
 
 function cleanExcerptText(raw?: string): string {
@@ -33,12 +40,72 @@ function cleanExcerptText(raw?: string): string {
   return t.trim() || 'Excerpt snippet available in search context.'
 }
 
-export default function ChatMessage({ role, content, answer_type, sources }: ChatMessageProps) {
+export default function ChatMessage({ 
+  id,
+  chatId,
+  role, 
+  content, 
+  answer_type, 
+  sources,
+  initialFeedback,
+  onRegenerate,
+  isRegenerating
+}: ChatMessageProps) {
   const isUser = role === 'user'
   const [activeExcerpt, setActiveExcerpt] = useState<MessageSource | null>(null)
-  const [copiedCode, setCopiedCode] = useState<string | null>(null)
+  const [copiedMessage, setCopiedMessage] = useState(false)
   const [copiedExcerpt, setCopiedExcerpt] = useState(false)
-  const [feedback, setFeedback] = useState<'up' | 'down' | null>(null)
+  const [feedback, setFeedback] = useState<'up' | 'down' | null>(
+    initialFeedback === 1 ? 'up' : initialFeedback === -1 ? 'down' : null
+  )
+
+  useEffect(() => {
+    if (initialFeedback === 1) setFeedback('up')
+    else if (initialFeedback === -1) setFeedback('down')
+    else if (initialFeedback === 0) setFeedback(null)
+  }, [initialFeedback])
+
+  const handleCopyMessage = async () => {
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(cleanedContent)
+      } else {
+        const ta = document.createElement('textarea')
+        ta.value = cleanedContent
+        ta.style.position = 'fixed'
+        ta.style.opacity = '0'
+        document.body.appendChild(ta)
+        ta.select()
+        document.execCommand('copy')
+        document.body.removeChild(ta)
+      }
+      setCopiedMessage(true)
+      setTimeout(() => setCopiedMessage(false), 2000)
+    } catch (err) {
+      console.error('Copy failed:', err)
+    }
+  }
+
+  const handleFeedback = async (type: 'up' | 'down') => {
+    const nextFeedback = feedback === type ? null : type
+    setFeedback(nextFeedback)
+
+    if (id && chatId) {
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
+        if (session) {
+          const ratingVal = nextFeedback === 'up' ? 1 : nextFeedback === 'down' ? -1 : 0
+          await axios.post(
+            `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/v1/chats/${chatId}/messages/${id}/feedback`,
+            { rating: ratingVal },
+            { headers: { Authorization: `Bearer ${session.access_token}` } }
+          )
+        }
+      } catch (err) {
+        console.warn('Failed to submit feedback:', err)
+      }
+    }
+  }
 
   // Clean up any legacy warning text strings from display since badge is shown
   const cleanedContent = content
@@ -250,53 +317,72 @@ export default function ChatMessage({ role, content, answer_type, sources }: Cha
               {/* Action Bar */}
               <div className="flex items-center justify-between mt-4 pt-2 text-slate-400 dark:text-slate-500 border-t border-slate-100 dark:border-slate-800/80">
                 <div className="flex items-center gap-1">
+                  {/* 1. Copy Message */}
                   <button 
-                    onClick={() => {
-                      navigator.clipboard.writeText(cleanedContent)
-                      setCopiedCode(cleanedContent)
-                      setTimeout(() => setCopiedCode(null), 2000)
-                    }}
-                    className="p-1.5 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg transition-colors flex items-center justify-center cursor-pointer" 
-                    title="Copy message"
+                    type="button"
+                    onClick={handleCopyMessage}
+                    className="p-1.5 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors flex items-center justify-center cursor-pointer" 
+                    title={copiedMessage ? 'Copied to clipboard' : 'Copy message'}
                   >
-                    {copiedCode === cleanedContent ? (
-                      <span className="text-emerald-600 dark:text-emerald-400 text-xs font-bold">✓ Copied</span>
+                    {copiedMessage ? (
+                      <span className="flex items-center gap-1 text-[#059669] dark:text-emerald-400 text-xs font-semibold px-0.5">
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                        </svg>
+                        <span>Copied</span>
+                      </span>
                     ) : (
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="1.75" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 01-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 011.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 00-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 01-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 00-3.375-3.375h-1.5a1.125 1.125 0 01-1.125-1.125v-1.5a3.375 3.375 0 00-3.375-3.375H9.75" />
                       </svg>
                     )}
                   </button>
                   
+                  {/* 2. Thumbs Up */}
                   <button 
-                    onClick={() => setFeedback(feedback === 'up' ? null : 'up')}
+                    type="button"
+                    onClick={() => handleFeedback('up')}
                     className={`p-1.5 rounded-lg transition-colors flex items-center justify-center cursor-pointer ${
-                      feedback === 'up' ? 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60' : 'hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
+                      feedback === 'up' 
+                        ? 'text-[#059669] dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60' 
+                        : 'hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
                     }`} 
                     title="Helpful"
                   >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                    <svg className="w-4 h-4" fill={feedback === 'up' ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M6.633 10.5c.806 0 1.533-.446 2.031-1.08a9.041 9.041 0 012.861-2.4c.723-.384 1.35-.956 1.653-1.715a4.498 4.498 0 00.322-1.672V3a.75.75 0 01.75-.75A2.25 2.25 0 0116.5 4.5c0 1.152-.26 2.243-.723 3.218-.266.558.107 1.282.725 1.282h3.126c1.026 0 1.945.694 2.054 1.715.045.422.068.85.068 1.285a11.95 11.95 0 01-2.649 7.521c-.388.482-.987.729-1.605.729H13.48c-.483 0-.964-.078-1.423-.23l-3.114-1.04a4.501 4.501 0 00-1.423-.23H5.25M6.633 10.5H3.75A2.25 2.25 0 001.5 12.75v6a2.25 2.25 0 002.25 2.25h2.883" />
                     </svg>
                   </button>
                   
+                  {/* 3. Thumbs Down */}
                   <button 
-                    onClick={() => setFeedback(feedback === 'down' ? null : 'down')}
+                    type="button"
+                    onClick={() => handleFeedback('down')}
                     className={`p-1.5 rounded-lg transition-colors flex items-center justify-center cursor-pointer ${
-                      feedback === 'down' ? 'text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/60' : 'hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
+                      feedback === 'down' 
+                        ? 'text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/60' 
+                        : 'hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
                     }`} 
                     title="Not helpful"
                   >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 15h2.25m8.024-9.75c.055.05.11.1.166.152m-15.69 0A2.25 2.25 0 014.5 3h6.75a2.25 2.25 0 012.25 2.25v2.25m-11.25 0v9.75a2.25 2.25 0 002.25 2.25h6.75a2.25 2.25 0 002.25-2.25V7.5m-11.25 0h11.25" />
+                    <svg className="w-4 h-4 -scale-y-100" fill={feedback === 'down' ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M6.633 10.5c.806 0 1.533-.446 2.031-1.08a9.041 9.041 0 012.861-2.4c.723-.384 1.35-.956 1.653-1.715a4.498 4.498 0 00.322-1.672V3a.75.75 0 01.75-.75A2.25 2.25 0 0116.5 4.5c0 1.152-.26 2.243-.723 3.218-.266.558.107 1.282.725 1.282h3.126c1.026 0 1.945.694 2.054 1.715.045.422.068.85.068 1.285a11.95 11.95 0 01-2.649 7.521c-.388.482-.987.729-1.605.729H13.48c-.483 0-.964-.078-1.423-.23l-3.114-1.04a4.501 4.501 0 00-1.423-.23H5.25M6.633 10.5H3.75A2.25 2.25 0 001.5 12.75v6a2.25 2.25 0 002.25 2.25h2.883" />
                     </svg>
                   </button>
                   
+                  {/* 4. Regenerate */}
                   <button 
-                    className="p-1.5 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg transition-colors flex items-center justify-center cursor-pointer" 
+                    type="button"
+                    onClick={() => onRegenerate && onRegenerate()}
+                    disabled={isRegenerating}
+                    className={`p-1.5 rounded-lg transition-colors flex items-center justify-center cursor-pointer ${
+                      isRegenerating 
+                        ? 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60' 
+                        : 'hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+                    }`} 
                     title="Regenerate response"
                   >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                    <svg className={`w-4 h-4 ${isRegenerating ? 'animate-spin text-emerald-500' : ''}`} fill="none" stroke="currentColor" strokeWidth="1.75" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
                     </svg>
                   </button>

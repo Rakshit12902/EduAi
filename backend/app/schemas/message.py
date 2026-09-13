@@ -28,6 +28,7 @@ class MessageResponse(MessageBase):
     chat_id: UUID
     answer_type: Optional[AnswerType] = None
     created_at: datetime
+    feedback_rating: Optional[int] = None
     sources: List[MessageSourceSchema] = []
     
     model_config = ConfigDict(from_attributes=True)

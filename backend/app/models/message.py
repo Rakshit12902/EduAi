@@ -26,6 +26,12 @@ class Message(Base):
     sources = relationship("MessageSource", back_populates="message", cascade="all, delete-orphan")
     feedback = relationship("Feedback", back_populates="message", uselist=False, cascade="all, delete-orphan")
 
+    @property
+    def feedback_rating(self) -> Optional[int]:
+        if self.feedback:
+            return self.feedback.rating
+        return None
+
 
 class MessageSource(Base):
     __tablename__ = "message_sources"
