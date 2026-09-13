@@ -35,11 +35,16 @@ export default function SettingsPage() {
 
   // Auth guard
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!session) {
+    let mounted = true
+    const checkSession = async () => {
+      await new Promise(resolve => setTimeout(resolve, 100))
+      const { data: { session } } = await supabase.auth.getSession()
+      if (mounted && !session && !window.location.hash.includes('access_token')) {
         router.push('/login')
       }
-    })
+    }
+    checkSession()
+    return () => { mounted = false }
   }, [router])
 
   // Sync selectedTheme when theme from context changes

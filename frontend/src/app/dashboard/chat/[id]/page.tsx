@@ -53,25 +53,27 @@ export default function ChatPage({ params }: { params: Promise<{ id: string }> }
     })
   }, [])
 
-  const { data: chat, isError } = useQuery({
+  const { data: chat } = useQuery({
     queryKey: ['chat', id],
     queryFn: async () => {
       const { data: { session } } = await supabase.auth.getSession()
-      if (!session) throw new Error('No session')
+      if (!session) return null
       
-      const res = await axios.get(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/v1/chats/${id}`, {
-        headers: { Authorization: `Bearer ${session.access_token}` }
-      })
-      return res.data as Chat
+      try {
+        const res = await axios.get(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/v1/chats/${id}`, {
+          headers: { Authorization: `Bearer ${session.access_token}` }
+        })
+        return res.data as Chat
+      } catch (err: any) {
+        if (err.response?.status === 404) {
+          router.push('/dashboard')
+        }
+        throw err
+      }
     },
-    retry: 1
+    enabled: !!id,
+    retry: 2
   })
-
-  useEffect(() => {
-    if (isError) {
-      router.push('/dashboard')
-    }
-  }, [isError, router])
 
   useEffect(() => {
     if (chat?.title) {

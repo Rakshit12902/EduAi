@@ -110,19 +110,28 @@ export default function HistoryPage() {
 
   // Auth guard and fetch current user details
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!session) {
-        router.push('/login')
-        return
+    let mounted = true
+    const checkSession = async () => {
+      await new Promise(resolve => setTimeout(resolve, 100))
+      const { data: { session } } = await supabase.auth.getSession()
+      if (mounted) {
+        if (!session && !window.location.hash.includes('access_token')) {
+          router.push('/login')
+          return
+        }
+        if (session?.user) {
+          const user = session.user
+          if (user.user_metadata?.full_name) {
+            setUserName(user.user_metadata.full_name.split(' ')[0])
+          } else if (user.email) {
+            const namePart = user.email.split('@')[0]
+            setUserName(namePart.charAt(0).toUpperCase() + namePart.slice(1))
+          }
+        }
       }
-      const user = session.user
-      if (user?.user_metadata?.full_name) {
-        setUserName(user.user_metadata.full_name.split(' ')[0])
-      } else if (user?.email) {
-        const namePart = user.email.split('@')[0]
-        setUserName(namePart.charAt(0).toUpperCase() + namePart.slice(1))
-      }
-    })
+    }
+    checkSession()
+    return () => { mounted = false }
   }, [router])
 
   // Dynamic Query to fetch all real user chats
