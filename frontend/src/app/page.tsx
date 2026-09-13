@@ -2038,34 +2038,43 @@ export default function LandingPage({ initialSection }: LandingPageProps = {}) {
 
       {/* VIDEO DEMO MODAL */}
       {videoModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn">
-          <div className="bg-white rounded-3xl max-w-3xl w-full overflow-hidden shadow-2xl border border-slate-100 relative">
-            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
-              <div className="flex items-center gap-2 font-bold text-slate-800 text-sm">
-                <svg className="w-5 h-5 text-indigo-600 fill-current" viewBox="0 0 24 24">
-                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/>
-                </svg>
-                EduAI Product Demo
+        <div 
+          className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4 sm:p-6 animate-fadeIn"
+          onClick={() => setVideoModalOpen(false)}
+        >
+          <div 
+            className="bg-slate-900 rounded-2xl sm:rounded-3xl max-w-4xl w-full overflow-hidden shadow-2xl border border-slate-800 relative flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="px-5 py-3.5 border-b border-slate-800 flex items-center justify-between bg-slate-900/90">
+              <div className="flex items-center gap-2.5 font-bold text-white text-sm">
+                <div className="w-6 h-6 rounded-lg bg-indigo-500/20 text-indigo-400 flex items-center justify-center">
+                  <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/>
+                  </svg>
+                </div>
+                <span>EduAI Product Demo</span>
               </div>
               <button
                 onClick={() => setVideoModalOpen(false)}
-                className="w-8 h-8 rounded-full bg-slate-200 text-slate-600 hover:bg-slate-300 flex items-center justify-center transition-colors cursor-pointer"
+                className="w-8 h-8 rounded-full bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700 flex items-center justify-center transition-colors cursor-pointer"
+                title="Close"
               >
                 <svg className="w-4 h-4 fill-none stroke-current stroke-2" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
             </div>
-            <div className="aspect-video bg-slate-950 flex flex-col items-center justify-center p-8 text-center text-white relative">
-              <div className="w-16 h-16 rounded-full bg-indigo-600/90 text-white flex items-center justify-center mb-4 shadow-lg animate-pulse">
-                <svg className="w-8 h-8 fill-current ml-1" viewBox="0 0 24 24">
-                  <path d="M8 5v14l11-7z" />
-                </svg>
-              </div>
-              <h3 className="font-bold text-lg">EduAI Platform Demo Video</h3>
-              <p className="text-xs text-slate-400 mt-1 max-w-sm">
-                Watch how EduAI processes PDF study materials, generates vector embeddings, and provides instant grounded answers with citations.
-              </p>
+            <div className="aspect-video bg-black relative flex items-center justify-center">
+              <video
+                src="/demo.mp4"
+                controls
+                autoPlay
+                playsInline
+                className="w-full h-full object-contain"
+              >
+                Your browser does not support the video tag.
+              </video>
             </div>
           </div>
         </div>
