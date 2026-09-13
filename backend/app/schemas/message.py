@@ -17,10 +17,11 @@ class MessageSourceSchema(BaseModel):
 
 class MessageBase(BaseModel):
     role: MessageRole
-    content: str = Field(..., min_length=1, max_length=32000)
+    content: str = Field(default="", max_length=32000)
 
-class MessageCreate(MessageBase):
-    pass
+class MessageCreate(BaseModel):
+    role: MessageRole
+    content: str = Field(..., min_length=1, max_length=32000)
 
 class MessageResponse(MessageBase):
     id: UUID

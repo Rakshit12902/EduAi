@@ -94,8 +94,9 @@ async def get_messages(
         .options(selectinload(Message.sources).selectinload(MessageSource.document))
         .order_by(Message.created_at.asc())
     )
-    messages = result.scalars().all()
-    
+    raw_messages = result.scalars().all()
+    # Filter out empty messages (e.g. from aborted or interrupted generation)
+    messages = [m for m in raw_messages if m.content and m.content.strip()]
     return messages
 
 async def generate_chat_stream(
@@ -318,7 +319,7 @@ async def generate_chat_stream(
                 chat_id=chat_id,
                 user_id=user_id,
                 role=MessageRole.assistant,
-                content=full_response,
+                content=full_response.strip() if full_response and full_response.strip() else "*(The model was unable to complete the response. Please try again.)*",
                 answer_type=answer_type
             )
             db.add(assistant_message)
