@@ -51,10 +51,12 @@ export default function ChatMessage({ role, content, answer_type, sources }: Cha
     idx === self.findIndex(t => t.filename === s.filename && t.page_number === s.page_number)
   )
 
-  // Badge logic: ONLY show 'Grounded in your documents' if valid sources (>= 60% match) were used
+  // Badge logic:
+  // An answer is ONLY Grounded in Documents if it actually has valid matching sources (>= 60% match) AND is not marked general.
+  // When there are no valid matching sources, or answer_type is general, it is General Knowledge.
   const hasSources = uniqueSources.length > 0
-  const isDocumentAnswer = !isUser && (hasSources || answer_type === 'document')
-  const isGeneralAnswer = !isUser && !hasSources && answer_type === 'general'
+  const isDocumentAnswer = !isUser && hasSources && answer_type !== 'general'
+  const isGeneralAnswer = !isUser && (!hasSources || answer_type === 'general')
 
   return (
     <div className={`flex w-full mb-6 ${isUser ? 'justify-end' : 'justify-start'}`}>

@@ -178,8 +178,14 @@ async def generate_chat_stream(
         if resolved_groq_model not in ALLOWED_GROQ_MODELS:
             resolved_groq_model = "openai/gpt-oss-120b"
 
+        # Check if any retrieved chunks actually match the query with meaningful relevance (>= 0.60)
+        # If all chunks are below 0.60, the query is a General Knowledge question (not grounded in documents).
+        RELEVANCE_THRESHOLD = 0.60
+        has_document_match = any(getattr(c, "score", 0.0) >= RELEVANCE_THRESHOLD for c in top_chunks)
+        prompt_chunks = top_chunks if has_document_match else []
+
         # Build prompt with user language preference
-        messages = build_prompt(query=query, context_chunks=top_chunks, history=history, language=user_lang)
+        messages = build_prompt(query=query, context_chunks=prompt_chunks, history=history, language=user_lang)
 
         # 3. Stream from Groq API (with automatic fallback if model is rate limited)
         try:
@@ -235,8 +241,8 @@ async def generate_chat_stream(
             payload = json.dumps({"type": "token", "text": final_text})
             yield f"data: {payload}\n\n"
                     
-        # Determine answer type directly from retrieved chunks
-        answer_type = AnswerType.document if top_chunks else AnswerType.general
+        # Determine answer type: only 'document' if we actually had relevant document matches
+        answer_type = AnswerType.document if has_document_match else AnswerType.general
 
         def sanitize_excerpt(text: str, max_length: int = 400) -> str:
             if not text:
@@ -263,31 +269,35 @@ async def generate_chat_stream(
                 truncated = truncated[:last_space]
             return truncated.strip() + "..."
 
-        # Construct sources for DB and client
+        # Construct sources for DB and client: ONLY include chunks meeting the relevance threshold
         sources_payload = []
-        for i, chunk in enumerate(top_chunks):
-            p = chunk.payload
-            raw_text = p.get("text") or p.get("chunk_text") or ""
-            
-            # Extract page number if not already present in payload
-            page_num = p.get("page_number")
-            if page_num is None:
-                page_match = re.search(r"(?:\[Page\s*|---\s*Page\s*|Page\s*)(\d+)", raw_text, re.IGNORECASE)
-                if page_match:
-                    try:
-                        page_num = int(page_match.group(1))
-                    except (ValueError, TypeError):
-                        page_num = None
+        if has_document_match:
+            for i, chunk in enumerate(top_chunks):
+                score = getattr(chunk, "score", 0.0)
+                if score < RELEVANCE_THRESHOLD:
+                    continue
+                p = chunk.payload
+                raw_text = p.get("text") or p.get("chunk_text") or ""
+                
+                # Extract page number if not already present in payload
+                page_num = p.get("page_number")
+                if page_num is None:
+                    page_match = re.search(r"(?:\[Page\s*|---\s*Page\s*|Page\s*)(\d+)", raw_text, re.IGNORECASE)
+                    if page_match:
+                        try:
+                            page_num = int(page_match.group(1))
+                        except (ValueError, TypeError):
+                            page_num = None
 
-            cleaned_excerpt = sanitize_excerpt(raw_text, max_length=400)
+                cleaned_excerpt = sanitize_excerpt(raw_text, max_length=400)
 
-            sources_payload.append({
-                "document_id": p.get("document_id"),
-                "filename": p.get("filename") or "Document",
-                "page_number": page_num,
-                "excerpt": cleaned_excerpt,
-                "relevance_score": getattr(chunk, "score", 0.0)
-            })
+                sources_payload.append({
+                    "document_id": p.get("document_id"),
+                    "filename": p.get("filename") or "Document",
+                    "page_number": page_num,
+                    "excerpt": cleaned_excerpt,
+                    "relevance_score": score
+                })
 
         # Yield sources payload
         final_payload = json.dumps({
