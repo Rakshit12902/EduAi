@@ -8,6 +8,7 @@ class MessageSourceSchema(BaseModel):
     id: UUID
     message_id: UUID
     document_id: UUID
+    filename: Optional[str] = None
     page_number: Optional[int] = None
     relevance_score: Optional[float] = None
     excerpt: Optional[str] = None

@@ -1,4 +1,5 @@
 import uuid
+from typing import Optional
 from sqlalchemy import Column, String, DateTime, ForeignKey, Text, Integer, Numeric, Enum
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
@@ -42,6 +43,12 @@ class MessageSource(Base):
     # Relationships
     message = relationship("Message", back_populates="sources")
     document = relationship("Document") # one-way relationship
+
+    @property
+    def filename(self) -> Optional[str]:
+        if self.document:
+            return self.document.filename
+        return None
 
 
 class Feedback(Base):

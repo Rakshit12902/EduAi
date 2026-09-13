@@ -1,5 +1,6 @@
 import json
 import asyncio
+import re
 from typing import List, Dict, Any
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import StreamingResponse
@@ -90,7 +91,7 @@ async def get_messages(
     result = await db.execute(
         select(Message)
         .where(Message.chat_id == chat_id)
-        .options(selectinload(Message.sources))
+        .options(selectinload(Message.sources).selectinload(MessageSource.document))
         .order_by(Message.created_at.asc())
     )
     messages = result.scalars().all()
@@ -237,15 +238,54 @@ async def generate_chat_stream(
         # Determine answer type directly from retrieved chunks
         answer_type = AnswerType.document if top_chunks else AnswerType.general
 
+        def sanitize_excerpt(text: str, max_length: int = 400) -> str:
+            if not text:
+                return ""
+            # Strip bracketed parser headers: [Page 1 Visual Content & Text: ...], [Uploaded Image Content: ...]
+            cleaned = re.sub(r"^\[(?:Page\s*\d+[^\n\]]*|Image\s*\d+[^\n\]]*|Uploaded\s*Image\s*Content)[^:\n]*:?\s*", "", text, flags=re.IGNORECASE)
+            # Strip markdown headers like ### Verbatim Text Extraction
+            cleaned = re.sub(r"#{1,6}\s*(?:Verbatim\s*Text\s*Extraction|Extracted\s*Text|Visual\s*Diagram\s*Description)[:\s]*\n*", "", cleaned, flags=re.IGNORECASE)
+            # Strip page dividers like --- Page 1 ---
+            cleaned = re.sub(r"^---\s*Page\s*\d+\s*---\s*", "", cleaned, flags=re.IGNORECASE)
+            # Strip decorative logo remarks
+            cleaned = re.sub(r"\(Logo:[^\)]*\)", "", cleaned, flags=re.IGNORECASE)
+            # Clean standalone brackets
+            cleaned = re.sub(r"^\[\s*", "", cleaned)
+            if cleaned.endswith("]"):
+                cleaned = cleaned[:-1].strip()
+            cleaned = cleaned.strip()
+            if len(cleaned) <= max_length:
+                return cleaned
+            # Break cleanly at last space
+            truncated = cleaned[:max_length]
+            last_space = truncated.rfind(" ")
+            if last_space > int(max_length * 0.7):
+                truncated = truncated[:last_space]
+            return truncated.strip() + "..."
+
         # Construct sources for DB and client
         sources_payload = []
         for i, chunk in enumerate(top_chunks):
             p = chunk.payload
+            raw_text = p.get("text") or p.get("chunk_text") or ""
+            
+            # Extract page number if not already present in payload
+            page_num = p.get("page_number")
+            if page_num is None:
+                page_match = re.search(r"(?:\[Page\s*|---\s*Page\s*|Page\s*)(\d+)", raw_text, re.IGNORECASE)
+                if page_match:
+                    try:
+                        page_num = int(page_match.group(1))
+                    except (ValueError, TypeError):
+                        page_num = None
+
+            cleaned_excerpt = sanitize_excerpt(raw_text, max_length=400)
+
             sources_payload.append({
                 "document_id": p.get("document_id"),
-                "filename": p.get("filename"),
-                "page_number": p.get("page_number"),
-                "excerpt": p.get("text", "")[:200] + "...",
+                "filename": p.get("filename") or "Document",
+                "page_number": page_num,
+                "excerpt": cleaned_excerpt,
                 "relevance_score": getattr(chunk, "score", 0.0)
             })
 

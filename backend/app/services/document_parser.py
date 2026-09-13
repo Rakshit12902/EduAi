@@ -28,7 +28,7 @@ def describe_image_multimodal(image_bytes: bytes) -> str:
                 model='gemini-3.6-flash',
                 contents=[
                     image,
-                    "Extract any text you see in this image verbatim. If there are diagrams, charts, graphs, shapes, colors, or structural relationships, describe them in detail for a teaching assistant knowledge base."
+                    "Extract all text from this image verbatim, preserving lines, codes, certificate numbers, names, titles, and dates. If there are diagrams, charts, or tables, describe their factual data and structure cleanly. Do NOT add markdown meta-commentary like '### Verbatim Text Extraction' or describe decorative graphic logos."
                 ]
             )
             return response.text.strip()
@@ -50,14 +50,14 @@ def extract_text_from_image(file_path: str) -> str:
         
         combined = ""
         if ocr_text:
-            combined += f"Extracted Text: {ocr_text}\n"
+            combined += f"{ocr_text}\n"
         if visual_desc:
-            combined += f"Visual Diagram Description: {visual_desc}\n"
+            combined += f"{visual_desc}\n"
             
         if not combined.strip():
-            combined = "An uploaded image document."
+            combined = "Uploaded image document."
             
-        return f"[Uploaded Image Content: {combined.strip()}]"
+        return combined.strip()
     except Exception as e:
         logger.error(f"Error extracting text from image {file_path}: {e}")
         raise e
@@ -85,7 +85,7 @@ def extract_text_from_pdf(file_path: str) -> str:
                     image_bytes = pix.tobytes("png")
                     visual_desc = describe_image_multimodal(image_bytes)
                     if visual_desc:
-                        page_content += f"\n[Page {page_num+1} Visual Content & Text:\n{visual_desc.strip()}]\n"
+                        page_content += f"\n--- Page {page_num+1} ---\n{visual_desc.strip()}\n"
                 except Exception as pix_err:
                     logger.error(f"Error rendering page {page_num+1} pixmap: {pix_err}")
             else:
@@ -98,7 +98,7 @@ def extract_text_from_pdf(file_path: str) -> str:
                         image_bytes = base_image["image"]
                         visual_desc = describe_image_multimodal(image_bytes)
                         if visual_desc:
-                            page_content += f"\n[Image {img_index+1} on Page {page_num+1}: {visual_desc.strip()}]\n"
+                            page_content += f"\n[Diagram on Page {page_num+1}: {visual_desc.strip()}]\n"
                     except Exception as img_err:
                         logger.warning(f"Error processing image {img_index} on page {page_num+1}: {img_err}")
             

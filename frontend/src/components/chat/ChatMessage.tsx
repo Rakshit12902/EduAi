@@ -15,10 +15,29 @@ interface ChatMessageProps {
   sources?: MessageSource[]
 }
 
+function cleanExcerptText(raw?: string): string {
+  if (!raw) return 'Excerpt snippet available in search context.'
+  let t = raw
+  // Strip bracketed parser headers: [Page 1 Visual Content & Text: ...], [Uploaded Image Content: ...]
+  t = t.replace(/^\[(?:Page\s*\d+[^\n\]]*|Image\s*\d+[^\n\]]*|Uploaded\s*Image\s*Content)[^:\n]*:?\s*/i, '')
+  // Strip markdown headers like ### Verbatim Text Extraction
+  t = t.replace(/#{1,6}\s*(?:Verbatim\s*Text\s*Extraction|Extracted\s*Text|Visual\s*Diagram\s*Description)[:\s]*/gi, '')
+  // Strip page dividers
+  t = t.replace(/^---\s*Page\s*\d+\s*---\s*/gi, '')
+  // Strip decorative logo remarks like (Logo: includes a purple caret symbol...)
+  t = t.replace(/\(Logo:[^\)]*\)/gi, '')
+  // Strip standalone brackets
+  t = t.replace(/^\[\s*/g, '').replace(/\s*\]$/g, '')
+  // Clean empty or stray markdown bullet points
+  t = t.replace(/^\s*[\*\-]\s+/gm, '• ')
+  return t.trim() || 'Excerpt snippet available in search context.'
+}
+
 export default function ChatMessage({ role, content, answer_type, sources }: ChatMessageProps) {
   const isUser = role === 'user'
   const [activeExcerpt, setActiveExcerpt] = useState<MessageSource | null>(null)
   const [copiedCode, setCopiedCode] = useState<string | null>(null)
+  const [copiedExcerpt, setCopiedExcerpt] = useState(false)
   const [feedback, setFeedback] = useState<'up' | 'down' | null>(null)
 
   // Clean up any legacy warning text strings from display since badge is shown
@@ -137,10 +156,14 @@ export default function ChatMessage({ role, content, answer_type, sources }: Cha
                         <button 
                           type="button"
                           onClick={() => setActiveExcerpt(activeExcerpt === s ? null : s)}
-                          className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-750 bg-white dark:bg-slate-800 shrink-0 transition-all shadow-2xs cursor-pointer"
+                          className={`flex items-center gap-1 px-3 py-1.5 rounded-lg border text-xs font-semibold shrink-0 transition-all shadow-2xs cursor-pointer ${
+                            activeExcerpt === s 
+                              ? 'border-[#059669] dark:border-emerald-500 text-[#059669] dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60' 
+                              : 'border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-750 bg-white dark:bg-slate-800'
+                          }`}
                         >
-                          <span>View</span>
-                          <svg className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                          <span>{activeExcerpt === s ? 'Hide' : 'View'}</span>
+                          <svg className="w-3.5 h-3.5 opacity-70" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
                           </svg>
                         </button>
@@ -150,24 +173,73 @@ export default function ChatMessage({ role, content, answer_type, sources }: Cha
 
                   {/* Excerpt Modal / Popover */}
                   {activeExcerpt && (
-                    <div className="p-3.5 bg-white dark:bg-slate-800 border border-emerald-200/80 dark:border-emerald-800/60 rounded-xl text-xs relative shadow-sm">
-                      <div className="flex items-center justify-between font-bold text-[#059669] dark:text-emerald-400 mb-1.5 pb-1 border-b border-slate-100 dark:border-slate-700">
-                        <span className="flex items-center gap-1.5">
-                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
-                          </svg>
-                          Excerpt: {activeExcerpt.filename} {activeExcerpt.page_number ? `(Page ${activeExcerpt.page_number})` : ''}
-                        </span>
-                        <button 
-                          onClick={() => setActiveExcerpt(null)}
-                          className="text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 p-0.5 rounded cursor-pointer"
-                        >
-                          ✕
-                        </button>
+                    <div className="p-3.5 bg-slate-50/90 dark:bg-slate-800/90 border border-slate-200/90 dark:border-slate-700/90 border-l-4 border-l-[#059669] dark:border-l-emerald-500 rounded-xl text-xs relative shadow-xs transition-all animate-in fade-in-50 duration-200">
+                      <div className="flex items-center justify-between gap-2 mb-2 pb-1.5 border-b border-slate-200/60 dark:border-slate-700/60 flex-wrap">
+                        <div className="flex items-center gap-2 min-w-0 flex-wrap">
+                          <span className="flex items-center gap-1.5 text-xs font-bold text-[#059669] dark:text-emerald-400">
+                            <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
+                            </svg>
+                            <span>Source Excerpt</span>
+                          </span>
+
+                          <span className="font-semibold text-slate-800 dark:text-slate-200 truncate max-w-[200px]" title={activeExcerpt.filename || 'Document'}>
+                            {activeExcerpt.filename || 'Referenced Document'}
+                          </span>
+
+                          {activeExcerpt.page_number && (
+                            <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-slate-200/70 dark:bg-slate-700/80 text-slate-700 dark:text-slate-300">
+                              Page {activeExcerpt.page_number}
+                            </span>
+                          )}
+
+                          {activeExcerpt.relevance_score != null && (
+                            <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-100/80 dark:bg-emerald-950/70 text-[#059669] dark:text-emerald-400">
+                              {Math.round(activeExcerpt.relevance_score * 100)}% match
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="flex items-center gap-1 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const cleaned = cleanExcerptText(activeExcerpt.excerpt)
+                              navigator.clipboard.writeText(cleaned)
+                              setCopiedExcerpt(true)
+                              setTimeout(() => setCopiedExcerpt(false), 2000)
+                            }}
+                            className="flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-200/60 dark:hover:bg-slate-700/60 transition-colors cursor-pointer"
+                            title="Copy excerpt text"
+                          >
+                            {copiedExcerpt ? (
+                              <span className="text-[#059669] dark:text-emerald-400 font-bold">✓ Copied</span>
+                            ) : (
+                              <>
+                                <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 01-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 011.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 00-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 01-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 00-3.375-3.375H9.75" />
+                                </svg>
+                                <span>Copy</span>
+                              </>
+                            )}
+                          </button>
+
+                          <button 
+                            type="button"
+                            onClick={() => setActiveExcerpt(null)}
+                            className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 rounded hover:bg-slate-200/50 dark:hover:bg-slate-700/50 cursor-pointer transition-colors"
+                            title="Close"
+                          >
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </button>
+                        </div>
                       </div>
-                      <p className="italic text-slate-600 dark:text-slate-300 leading-relaxed font-serif">
-                        "{activeExcerpt.excerpt || 'Excerpt snippet available in search context.'}"
-                      </p>
+
+                      <div className="max-h-48 overflow-y-auto whitespace-pre-wrap font-sans text-xs text-slate-700 dark:text-slate-200 leading-relaxed pr-1 select-text selection:bg-emerald-100 dark:selection:bg-emerald-900/50">
+                        {cleanExcerptText(activeExcerpt.excerpt)}
+                      </div>
                     </div>
                   )}
                 </div>
