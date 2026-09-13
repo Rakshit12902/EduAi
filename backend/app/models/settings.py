@@ -14,7 +14,7 @@ class UserSettings(Base):
     theme = Column(Enum(AppTheme), nullable=False, default=AppTheme.system)
     accent_color = Column(Enum(AppAccentColor), nullable=False, default=AppAccentColor.violet)
     language = Column(Enum(AppLanguage), nullable=False, default=AppLanguage.en)
-    llm_model = Column(String(255), nullable=False, default="qwen/qwen3.6-27b")
+    llm_model = Column(String(255), nullable=False, default="openai/gpt-oss-120b")
     embedding_model = Column(String(255), nullable=False, default="gemini-embedding-001")
     temperature = Column(Numeric(3, 2), nullable=False, default=0.20)
     max_tokens = Column(Integer, nullable=False, default=1024)

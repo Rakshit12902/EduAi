@@ -28,7 +28,7 @@ export default function SettingsPage() {
   const queryClient = useQueryClient()
   const [selectedTheme, setSelectedTheme] = useState<Theme>(theme)
   const [fullName, setFullName] = useState('Rakshit Katiyar')
-  const [llmModel, setLlmModel] = useState('gemma2-9b-it')
+  const [llmModel, setLlmModel] = useState('openai/gpt-oss-120b')
   const [temperature, setTemperature] = useState(0.95)
   const [language, setLanguage] = useState('en')
   const [saveStatus, setSaveStatus] = useState<string | null>(null)
@@ -75,7 +75,16 @@ export default function SettingsPage() {
         setAccentColor(settingsData.accent_color)
       }
       if (settingsData.full_name) setFullName(settingsData.full_name)
-      if (settingsData.llm_model) setLlmModel(settingsData.llm_model)
+      if (settingsData.llm_model) {
+        const legacyMap: Record<string, string> = {
+          'llama-3.3-70b-versatile': 'openai/gpt-oss-120b',
+          'llama-3.1-8b-instant': 'openai/gpt-oss-20b',
+          'deepseek-r1-distill-llama-70b': 'qwen/qwen3.6-27b',
+          'gemma2-9b-it': 'openai/gpt-oss-20b',
+          'gemma-2-9b-it': 'openai/gpt-oss-20b',
+        }
+        setLlmModel(legacyMap[settingsData.llm_model] || settingsData.llm_model)
+      }
       if (settingsData.temperature !== undefined) setTemperature(Number(settingsData.temperature))
       if (settingsData.language) setLanguage(settingsData.language)
     }
@@ -493,10 +502,11 @@ export default function SettingsPage() {
                     onChange={(e) => setLlmModel(e.target.value)}
                     className="w-full bg-transparent ml-2.5 text-sm font-medium text-slate-800 dark:text-slate-100 focus:outline-none cursor-pointer pr-6 appearance-none"
                   >
-                    <option value="gemma2-9b-it" className="dark:bg-slate-800">Gemma 2 9B IT (Google Gemma)</option>
-                    <option value="llama-3.3-70b-versatile" className="dark:bg-slate-800">Llama 3.3 70B Versatile (Recommended / Fast)</option>
-                    <option value="llama-3.1-8b-instant" className="dark:bg-slate-800">Llama 3.1 8B Instant (Ultra Fast)</option>
-                    <option value="deepseek-r1-distill-llama-70b" className="dark:bg-slate-800">DeepSeek R1 Distill 70B (Reasoning)</option>
+                    <option value="openai/gpt-oss-120b" className="dark:bg-slate-800">GPT-OSS 120B (Recommended / High Intelligence)</option>
+                    <option value="openai/gpt-oss-20b" className="dark:bg-slate-800">GPT-OSS 20B (Ultra Fast / Lightweight)</option>
+                    <option value="qwen/qwen3.6-27b" className="dark:bg-slate-800">Qwen 3.6 27B (Reasoning & Multilingual)</option>
+                    <option value="qwen/qwen3.8-27b" className="dark:bg-slate-800">Qwen 3.8 27B (Advanced Reasoning & Code)</option>
+                    <option value="gemini-3.6-flash" className="dark:bg-slate-800">Gemini 3.6 Flash (Google GenAI)</option>
                   </select>
                   <svg className="w-4 h-4 text-slate-400 dark:text-slate-500 absolute right-3.5 pointer-events-none" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />

@@ -145,7 +145,7 @@ async def generate_chat_stream(
             top_chunks = []
         
         # Fetch user settings for model, temperature & language
-        user_model = "llama-3.3-70b-versatile"
+        user_model = "openai/gpt-oss-120b"
         user_temp = 0.2
         user_lang = "en"
         async with db_session_factory() as db:
@@ -169,18 +169,18 @@ async def generate_chat_stream(
         }
         # Map legacy/UI model names to valid Groq models
         GROQ_MODEL_MAP = {
+            # Active native Groq models
+            "openai/gpt-oss-120b": "openai/gpt-oss-120b",
+            "openai/gpt-oss-20b": "openai/gpt-oss-20b",
+            "qwen/qwen3.6-27b": "qwen/qwen3.6-27b",
+            "qwen/qwen3.8-27b": "qwen/qwen3.8-27b",
+            # Legacy aliases
             "llama-3.3-70b-versatile": "openai/gpt-oss-120b",
             "llama-3.1-8b-instant": "openai/gpt-oss-20b",
             "deepseek-r1-distill-llama-70b": "qwen/qwen3.6-27b",
             "gemma2-9b-it": "openai/gpt-oss-20b",
-            "qwen/qwen3.6-27b": "qwen/qwen3.6-27b",
-            "openai/gpt-oss-120b": "openai/gpt-oss-120b",
-            "openai/gpt-oss-20b": "openai/gpt-oss-20b",
+            "gemma-2-9b-it": "openai/gpt-oss-20b",
         }
-        resolved_groq_model = GROQ_MODEL_MAP.get(user_model, "openai/gpt-oss-120b")
-        # Fall back to a safe default if the resolved model is not in the allowlist
-        if resolved_groq_model not in ALLOWED_GROQ_MODELS:
-            resolved_groq_model = "openai/gpt-oss-120b"
 
         # Check if any retrieved chunks actually match the query with meaningful relevance (>= 0.60)
         # If all chunks are below 0.60, the query is a General Knowledge question (not grounded in documents).
@@ -191,33 +191,53 @@ async def generate_chat_stream(
         # Build prompt with user language preference
         messages = build_prompt(query=query, context_chunks=prompt_chunks, history=history, language=user_lang)
 
-        # 3. Stream from Groq API (with automatic fallback if model is rate limited)
-        try:
-            stream = await groq_client.chat.completions.create(
-                messages=messages,
-                model=resolved_groq_model,
-                temperature=user_temp,
-                max_tokens=2048,
-                stream=True
-            )
-        except Exception as groq_err:
-            import logging
-            logging.getLogger(__name__).warning(f"Groq API failed ({groq_err}). Falling back to Gemini Flash...")
-            
-            if not settings.GEMINI_API_KEY:
-                raise Exception(f"Groq failed ({groq_err}) and no Gemini fallback API key provided.")
+        # 3. Stream from selected provider (Gemini or Groq)
+        if user_model == "gemini-3.6-flash":
+            try:
+                from google import genai
+                gemini_client = genai.Client(api_key=settings.GEMINI_API_KEY)
+                gemini_prompt = "\n".join([f"{m['role'].upper()}: {m['content']}" for m in messages])
+                stream = gemini_client.aio.models.generate_content_stream(
+                    model='gemini-3.6-flash',
+                    contents=gemini_prompt
+                )
+            except Exception as gemini_err:
+                import logging
+                logging.getLogger(__name__).warning(f"Gemini API failed ({gemini_err}). Falling back to Groq...")
+                stream = await groq_client.chat.completions.create(
+                    messages=messages,
+                    model="openai/gpt-oss-120b",
+                    temperature=user_temp,
+                    max_tokens=2048,
+                    stream=True
+                )
+        else:
+            resolved_groq_model = GROQ_MODEL_MAP.get(user_model, "openai/gpt-oss-120b")
+            if resolved_groq_model not in ALLOWED_GROQ_MODELS:
+                resolved_groq_model = "openai/gpt-oss-120b"
+
+            try:
+                stream = await groq_client.chat.completions.create(
+                    messages=messages,
+                    model=resolved_groq_model,
+                    temperature=user_temp,
+                    max_tokens=2048,
+                    stream=True
+                )
+            except Exception as groq_err:
+                import logging
+                logging.getLogger(__name__).warning(f"Groq API failed ({groq_err}). Falling back to Gemini Flash...")
                 
-            from google import genai
-            gemini_client = genai.Client(api_key=settings.GEMINI_API_KEY)
-            
-            # Format messages for Gemini (it prefers a single prompt string if we aren't doing strict multi-turn parts)
-            gemini_prompt = "\n".join([f"{m['role'].upper()}: {m['content']}" for m in messages])
-            
-            # Use the asynchronous client under .aio (do NOT await the generator creation)
-            stream = gemini_client.aio.models.generate_content_stream(
-                model='gemini-3.6-flash',
-                contents=gemini_prompt
-            )
+                if not settings.GEMINI_API_KEY:
+                    raise Exception(f"Groq failed ({groq_err}) and no Gemini fallback API key provided.")
+                    
+                from google import genai
+                gemini_client = genai.Client(api_key=settings.GEMINI_API_KEY)
+                gemini_prompt = "\n".join([f"{m['role'].upper()}: {m['content']}" for m in messages])
+                stream = gemini_client.aio.models.generate_content_stream(
+                    model='gemini-3.6-flash',
+                    contents=gemini_prompt
+                )
 
         full_response = ""
         think_filter = ThinkFilter()
