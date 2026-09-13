@@ -2,12 +2,13 @@
 
 import { use, useState, useEffect, useRef, useCallback } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import axios from 'axios'
 import { supabase } from '@/lib/supabase'
 
 import ChatInput from '@/components/chat/ChatInput'
 import ChatMessage, { MessageSource } from '@/components/chat/ChatMessage'
+import { UserMenu } from '@/components/layout/UserMenu'
 
 type Chat = {
   id: string
@@ -28,12 +29,29 @@ export default function ChatPage({ params }: { params: Promise<{ id: string }> }
   const { id } = use(params)
   const searchParams = useSearchParams()
   const router = useRouter()
+  const queryClient = useQueryClient()
+
   const [messages, setMessages] = useState<Message[]>([])
   const [isTyping, setIsTyping] = useState(false)
+  const [userName, setUserName] = useState('Rakshit')
+  const [isEditingTitle, setIsEditingTitle] = useState(false)
+  const [titleInput, setTitleInput] = useState('')
+
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const hasAutoSent = useRef(false)
-  // Guard: prevents fetchMessages from overwriting an in-progress stream
   const isStreamingRef = useRef(false)
+
+  // Fetch current user details
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user?.user_metadata?.full_name) {
+        setUserName(user.user_metadata.full_name.split(' ')[0])
+      } else if (user?.email) {
+        const namePart = user.email.split('@')[0]
+        setUserName(namePart.charAt(0).toUpperCase() + namePart.slice(1))
+      }
+    })
+  }, [])
 
   const { data: chats } = useQuery({
     queryKey: ['chats'],
@@ -50,10 +68,39 @@ export default function ChatPage({ params }: { params: Promise<{ id: string }> }
 
   const chat = chats?.find((c) => c.id === id)
 
-  // Fetch existing messages — skips if a stream is currently running to prevent race
+  useEffect(() => {
+    if (chat?.title) {
+      setTitleInput(chat.title)
+    }
+  }, [chat?.title])
+
+  // Update chat title mutation
+  const updateTitleMutation = useMutation({
+    mutationFn: async (newTitle: string) => {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) return
+      await axios.patch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/v1/chats/${id}`, 
+        { title: newTitle },
+        { headers: { Authorization: `Bearer ${session.access_token}` } }
+      )
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['chats'] })
+      setIsEditingTitle(false)
+    }
+  })
+
+  const handleTitleSubmit = () => {
+    if (titleInput.trim() && titleInput !== chat?.title) {
+      updateTitleMutation.mutate(titleInput.trim())
+    } else {
+      setIsEditingTitle(false)
+    }
+  }
+
+  // Fetch existing messages
   useEffect(() => {
     const fetchMessages = async () => {
-      // Don't overwrite live streaming messages with a stale DB fetch
       if (isStreamingRef.current) return
 
       const { data: { session } } = await supabase.auth.getSession()
@@ -62,7 +109,6 @@ export default function ChatPage({ params }: { params: Promise<{ id: string }> }
         const res = await axios.get(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/v1/chats/${id}/messages/`, {
           headers: { Authorization: `Bearer ${session.access_token}` }
         })
-        // Only update if we are still not streaming (stream could have started while GET was in-flight)
         if (!isStreamingRef.current) {
           setMessages(res.data)
         }
@@ -90,7 +136,6 @@ export default function ChatPage({ params }: { params: Promise<{ id: string }> }
     setIsTyping(true)
     isStreamingRef.current = true
 
-    // Defer URL cleanup until after stream is fully set up to avoid mid-stream re-renders
     if (replaceUrl) {
       router.replace(replaceUrl)
     }
@@ -122,7 +167,6 @@ export default function ChatPage({ params }: { params: Promise<{ id: string }> }
         
         buffer += decoder.decode(value, { stream: true })
         const lines = buffer.split('\n')
-        // Keep uncompleted partial line at the end of buffer
         buffer = lines.pop() || ''
         
         for (const line of lines) {
@@ -186,38 +230,100 @@ export default function ChatPage({ params }: { params: Promise<{ id: string }> }
     const q = searchParams.get('q')
     if (q && !hasAutoSent.current) {
       hasAutoSent.current = true
-      // Pass the URL to clean up as a param so router.replace runs AFTER
-      // isStreamingRef is set, preventing fetchMessages from racing
       handleSendMessage(q, [], `/dashboard/chat/${id}`)
     }
   }, [searchParams, id, handleSendMessage])
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-surface-container-lowest relative">
-      {/* Top Bar */}
-      <header className="h-16 px-6 border-b border-outline-variant flex items-center justify-between bg-surface-container-low shrink-0">
-        <div>
-          <h1 className="font-display font-semibold text-lg text-on-surface">
-            {chat ? chat.title : 'Chat Workspace'}
-          </h1>
-          {chat?.description && (
-            <p className="text-xs text-on-surface-variant truncate max-w-md">
-              {chat.description}
-            </p>
-          )}
+    <div className="flex-1 flex flex-col h-full bg-gradient-to-br from-[#edf4fe] via-[#f2f6fe] to-[#f8faff] dark:from-slate-950 dark:via-[#090d16] dark:to-slate-950 relative overflow-hidden selection:bg-emerald-500 selection:text-white">
+      
+      {/* Top Bar Header */}
+      <header className="h-16 px-6 border-b border-slate-200/80 dark:border-slate-800/80 bg-white/70 dark:bg-slate-900/80 backdrop-blur-md flex items-center justify-between z-20 shrink-0 select-none">
+        {/* Left: Chat Title & Subtitle */}
+        <div className="flex flex-col">
+          <div className="flex items-center gap-2">
+            {isEditingTitle ? (
+              <input
+                type="text"
+                value={titleInput}
+                onChange={(e) => setTitleInput(e.target.value)}
+                onBlur={handleTitleSubmit}
+                onKeyDown={(e) => e.key === 'Enter' && handleTitleSubmit()}
+                autoFocus
+                className="font-bold text-sm sm:text-base text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-800 border border-emerald-500 rounded-md px-2 py-0.5 outline-none"
+              />
+            ) : (
+              <h1 className="font-bold text-sm sm:text-base text-slate-900 dark:text-slate-100 truncate max-w-xs sm:max-w-md">
+                {chat ? chat.title : 'meka naam kya hai'}
+              </h1>
+            )}
+
+            <button
+              onClick={() => setIsEditingTitle(!isEditingTitle)}
+              className="text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 p-1 rounded-md transition-colors cursor-pointer"
+              title="Edit chat title"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
+              </svg>
+            </button>
+          </div>
+          <span className="text-[11px] text-slate-400 dark:text-slate-500 font-medium leading-none mt-0.5">
+            Auto-generated chat
+          </span>
+        </div>
+
+        {/* Right: User Profile Menu */}
+        <div className="flex items-center gap-3">
+          <UserMenu userName={userName} subtitle="Hello," />
         </div>
       </header>
 
+      {/* Ambient Artwork Layer (Blended seamlessly into background) */}
+      
+
+
+      {/* 3D Robot Study Setup on Right (Desk Lamp, Robot Reading, Books, Mug, Notebook) */}
+      <div className="absolute bottom-0 right-0 w-[260px] lg:w-[300px] xl:w-[350px] 2xl:w-[390px] z-0 hidden xl:block select-none pointer-events-none opacity-90 transition-opacity">
+        <img 
+          src="/chat_robot_study.png" 
+          alt="Robot Study Setup" 
+          className="w-full h-auto object-contain object-bottom-right"
+        />
+      </div>
+
+      {/* Floating Handwritten Inspiration Text on Top Right */}
+      <div className="absolute top-20 right-8 lg:right-14 xl:right-20 w-24 sm:w-28 z-0 hidden md:block select-none pointer-events-none opacity-85 transition-opacity">
+        <img 
+          src="/chat_floating_text_transparent.png" 
+          alt="Learn Ask Understand Grow" 
+          className="w-full h-auto dark:hidden"
+        />
+        <img 
+          src="/chat_floating_text_dark.png" 
+          alt="Learn Ask Understand Grow" 
+          className="w-full h-auto hidden dark:block"
+        />
+      </div>
+
       {/* Main Content Area (Messages) */}
-      <div className="flex-1 overflow-y-auto p-6 flex flex-col">
+      <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-6 flex flex-col z-10 relative custom-scroll">
         {messages.length === 0 ? (
-          <div className="flex-1 flex flex-col items-center justify-center text-center opacity-60">
-            <span className="material-symbols-outlined text-4xl mb-4 text-primary">chat</span>
-            <p className="text-sm font-medium">No messages yet.</p>
-            <p className="text-xs mt-1">Ask a question or upload a document to get started.</p>
+          <div className="flex-1 flex flex-col items-center justify-center text-center my-auto">
+            <div className="w-16 h-16 rounded-3xl bg-emerald-500/10 dark:bg-emerald-950/40 text-[#059669] dark:text-emerald-400 flex items-center justify-center mb-3 shadow-2xs">
+              <svg className="w-8 h-8" fill="none" stroke="currentColor" strokeWidth="1.75" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
+              </svg>
+            </div>
+            <h2 className="text-base font-bold text-slate-800 dark:text-slate-100">
+              Ready to learn with EduAI
+            </h2>
+            <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm mt-1 leading-relaxed">
+              Ask a question about your documents, summarize your notes, or solve a problem.
+            </p>
           </div>
         ) : (
-          <div className="w-full max-w-4xl mx-auto flex flex-col pb-4">
+          <div className="w-full max-w-3xl xl:max-w-4xl mx-auto flex flex-col pb-4">
             {messages.map((msg) => (
               <ChatMessage 
                 key={msg.id} 
@@ -233,9 +339,16 @@ export default function ChatPage({ params }: { params: Promise<{ id: string }> }
       </div>
 
       {/* Input Area */}
-      <div className="w-full bg-surface-container-lowest pb-6 pt-2 shrink-0 border-t border-outline-variant/30">
+      <div className="w-full pb-2 pt-1 shrink-0 z-20 relative bg-gradient-to-t from-[#edf4fe] dark:from-slate-950 via-[#edf4fe]/90 dark:via-slate-950/90 to-transparent">
         <ChatInput chatId={id} onSendMessage={handleSendMessage} disabled={isTyping} />
+        {/* Footer Tagline (from reference 06_42_30 PM) */}
+        <div className="flex items-center justify-center gap-2 mt-1.5 text-[11px] text-slate-400 dark:text-slate-500 font-normal italic select-none">
+          <span className="w-6 h-[1px] bg-slate-300 dark:bg-slate-800" />
+          <span>&ldquo;A smarter you, for a brighter tomorrow.&rdquo;</span>
+          <span className="w-6 h-[1px] bg-slate-300 dark:bg-slate-800" />
+        </div>
       </div>
+
     </div>
   )
 }

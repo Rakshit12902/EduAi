@@ -1,7 +1,14 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
-  --color-surface: #f8f9ff;
+  --color-accent: var(--accent-primary, #10b981);
+  --color-accent-hover: var(--accent-hover, #059669);
+  --color-accent-light: var(--accent-light, #ecfdf5);
+  --color-accent-border: var(--accent-border, #a7f3d0);
+  --color-accent-text: var(--accent-text, #047857);
+  --color-accent-ring: var(--accent-ring, rgba(16, 185, 129, 0.35));
   --color-surface-dim: #cbdbf5;
   --color-surface-bright: #f8f9ff;
   --color-surface-container-lowest: #ffffff;
@@ -136,4 +143,69 @@
 
   .hide-scrollbar::-webkit-scrollbar { display: none; }
   .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+  /* Flawless hardware-accelerated modal zoom animations */
+  @keyframes modalBackdropIn {
+    0% {
+      opacity: 0;
+    }
+    100% {
+      opacity: 1;
+    }
+  }
+
+  @keyframes modalBackdropOut {
+    0% {
+      opacity: 1;
+    }
+    100% {
+      opacity: 0;
+    }
+  }
+
+  @keyframes modalZoomIn {
+    0% {
+      opacity: 0;
+      transform: scale3d(0.88, 0.88, 1) translateY(16px);
+    }
+    100% {
+      opacity: 1;
+      transform: scale3d(1, 1, 1) translateY(0);
+    }
+  }
+
+  @keyframes modalZoomOut {
+    0% {
+      opacity: 1;
+      transform: scale3d(1, 1, 1) translateY(0);
+    }
+    100% {
+      opacity: 0;
+      transform: scale3d(0.92, 0.92, 1) translateY(12px);
+    }
+  }
+
+  .modal-backdrop-in {
+    animation: modalBackdropIn 300ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    will-change: opacity;
+  }
+
+  .modal-backdrop-out {
+    animation: modalBackdropOut 220ms cubic-bezier(0.4, 0, 1, 1) forwards;
+    will-change: opacity;
+  }
+
+  .modal-zoom-in {
+    animation: modalZoomIn 340ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    will-change: transform, opacity;
+    backface-visibility: hidden;
+    transform: translateZ(0);
+  }
+
+  .modal-zoom-out {
+    animation: modalZoomOut 220ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    will-change: transform, opacity;
+    backface-visibility: hidden;
+    transform: translateZ(0);
+  }
 }

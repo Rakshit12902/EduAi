@@ -4,11 +4,12 @@ from datetime import datetime
 import uuid
 
 class ChatBase(BaseModel):
-    title: str
+    title: Optional[str] = "New Chat"
     description: Optional[str] = None
 
-class ChatCreate(ChatBase):
-    pass
+class ChatCreate(BaseModel):
+    title: Optional[str] = "New Chat"
+    description: Optional[str] = None
 
 class ChatUpdate(BaseModel):
     title: Optional[str] = None

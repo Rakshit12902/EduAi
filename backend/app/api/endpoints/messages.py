@@ -298,6 +298,12 @@ async def generate_chat_stream(
             chat_obj = chat_result.scalars().first()
             if chat_obj:
                 chat_obj.last_message_at = datetime.now(timezone.utc)
+                if chat_obj.title in ["New Chat", "New Study Session", "Untitled Chat", ""]:
+                    words = query.split()
+                    new_title = " ".join(words[:6])
+                    if len(words) > 6:
+                        new_title += "..."
+                    chat_obj.title = new_title
                 db.add(chat_obj)
 
             await db.commit()

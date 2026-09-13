@@ -46,16 +46,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-surface-container-lowest">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      <div className="min-h-screen flex items-center justify-center bg-[#f8fafc] dark:bg-slate-950">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600"></div>
       </div>
     )
   }
 
   return (
-    <div className="flex h-screen bg-surface-container-lowest overflow-hidden">
+    <div className="flex h-screen bg-[#f8fafc] dark:bg-[#070e18] overflow-hidden">
       <Sidebar />
-      <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
+      <main className="flex-1 flex flex-col min-w-0 overflow-hidden relative bg-[#f8fafc] dark:bg-[#070e18]">
         {children}
       </main>
     </div>
