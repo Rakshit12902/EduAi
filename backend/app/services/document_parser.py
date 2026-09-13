@@ -25,7 +25,7 @@ def describe_image_multimodal(image_bytes: bytes) -> str:
             client = genai.Client(api_key=gemini_key)
             image = Image.open(io.BytesIO(image_bytes))
             response = client.models.generate_content(
-                model='gemini-2.0-flash',
+                model='gemini-3.6-flash',
                 contents=[
                     image,
                     "Extract any text you see in this image verbatim. If there are diagrams, charts, graphs, shapes, colors, or structural relationships, describe them in detail for a teaching assistant knowledge base."
@@ -65,58 +65,46 @@ def extract_text_from_image(file_path: str) -> str:
 def extract_text_from_pdf(file_path: str) -> str:
     """
     Extracts text from a PDF file using PyMuPDF.
-    Also uses EasyOCR + Multimodal Vision for embedded images and scanned pages.
+    Also uses Multimodal Vision for embedded images and scanned pages.
     """
     text = ""
     try:
         doc = fitz.open(file_path)
         for page_num, page in enumerate(doc):
             page_text = page.get_text("text").strip()
+            page_content = ""
             if page_text:
-                text += page_text + "\n"
+                page_content += page_text + "\n"
                 
-            # Extract images from page
-            image_list = page.get_images(full=True)
-            logger.info(f"Page {page_num+1} has {len(image_list)} images.")
-            
-            for img_index, img in enumerate(image_list):
-                xref = img[0]
+            # If page has little selectable text (typical for certificates, scanned docs, slides),
+            # render the full page as a high-res pixmap and use Gemini Vision OCR
+            if len(page_text) < 50:
+                logger.info(f"Page {page_num+1} has little selectable text ({len(page_text)} chars). Rendering pixmap for Gemini Vision...")
                 try:
-                    base_image = doc.extract_image(xref)
-                    image_bytes = base_image["image"]
-                    
-                    ocr_text = extract_text_with_easyocr(image_bytes)
+                    pix = page.get_pixmap(matrix=fitz.Matrix(1.5, 1.5))
+                    image_bytes = pix.tobytes("png")
                     visual_desc = describe_image_multimodal(image_bytes)
-                    
-                    img_summary = ""
-                    if ocr_text:
-                        img_summary += f"Text: {ocr_text} "
                     if visual_desc:
-                        img_summary += f"Diagram Description: {visual_desc}"
-                        
-                    if img_summary:
-                        text += f"\n[Image {img_index+1} on Page {page_num+1}: {img_summary.strip()}]\n"
-                        
-                except Exception as img_err:
-                    logger.error(f"Error processing image {img_index} on page {page_num}: {img_err}")
+                        page_content += f"\n[Page {page_num+1} Visual Content & Text:\n{visual_desc.strip()}]\n"
+                except Exception as pix_err:
+                    logger.error(f"Error rendering page {page_num+1} pixmap: {pix_err}")
+            else:
+                # Page has plenty of text, but also check embedded diagram images if any
+                image_list = page.get_images(full=True)
+                for img_index, img in enumerate(image_list[:3]):
+                    xref = img[0]
+                    try:
+                        base_image = doc.extract_image(xref)
+                        image_bytes = base_image["image"]
+                        visual_desc = describe_image_multimodal(image_bytes)
+                        if visual_desc:
+                            page_content += f"\n[Image {img_index+1} on Page {page_num+1}: {visual_desc.strip()}]\n"
+                    except Exception as img_err:
+                        logger.warning(f"Error processing image {img_index} on page {page_num+1}: {img_err}")
             
-            # Fallback for scanned pages
-            if len(page_text) < 20 and len(image_list) == 0:
-                logger.info(f"Page {page_num+1} appears to be a scanned page. Rendering pixmap...")
-                pix = page.get_pixmap(matrix=fitz.Matrix(1.5, 1.5))
-                image_bytes = pix.tobytes("png")
-                ocr_text = extract_text_with_easyocr(image_bytes)
-                visual_desc = describe_image_multimodal(image_bytes)
+            if page_content:
+                text += page_content + "\n"
                 
-                scan_summary = ""
-                if ocr_text:
-                    scan_summary += f"Text: {ocr_text} "
-                if visual_desc:
-                    scan_summary += f"Diagram Description: {visual_desc}"
-                    
-                if scan_summary:
-                    text += f"\n[Scanned Page {page_num+1}: {scan_summary.strip()}]\n"
-                    
         doc.close()
     except Exception as e:
         logger.error(f"Error extracting text from PDF {file_path}: {e}")

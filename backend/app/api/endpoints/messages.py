@@ -119,13 +119,14 @@ async def generate_chat_stream(
 
     # 2. RAG Pipeline
     try:
-        # Fetch the most recent document's filename in the chat to prioritize it if the user query is vague
+        # Fetch the most recent READY document's filename in the chat to prioritize it if the user query is vague
         latest_doc_filename = ""
         async with db_session_factory() as db:
             from app.models.document import Document
+            from app.models.enums import DocumentStatus
             doc_res = await db.execute(
                 select(Document)
-                .where(Document.chat_id == chat_id)
+                .where(Document.chat_id == chat_id, Document.status == DocumentStatus.READY)
                 .order_by(Document.created_at.desc())
                 .limit(1)
             )
@@ -249,11 +250,6 @@ async def generate_chat_stream(
                     
         # Determine answer type directly from retrieved chunks
         answer_type = AnswerType.document if top_chunks else AnswerType.general
-        
-        # If chunks were provided but the AI did NOT cite a source, it means it used general knowledge.
-        if top_chunks and "source:" not in full_response.lower():
-            answer_type = AnswerType.general
-            top_chunks = []
 
         # Construct sources for DB and client
         sources_payload = []
