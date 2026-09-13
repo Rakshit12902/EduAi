@@ -168,23 +168,27 @@ async def generate_chat_stream(
                 if u_settings.language:
                     user_lang = u_settings.language.value if hasattr(u_settings.language, 'value') else str(u_settings.language)
 
-        # Allowlist of valid Groq model identifiers — prevents LLM model injection
+        # Allowlist of valid Groq model identifiers on this environment
         ALLOWED_GROQ_MODELS = {
-            "llama-3.3-70b-versatile",
-            "llama-3.1-8b-instant",
-            "deepseek-r1-distill-llama-70b",
-            "gemma2-9b-it",
+            "openai/gpt-oss-120b",
+            "openai/gpt-oss-20b",
+            "qwen/qwen3.6-27b",
+            "qwen/qwen3.8-27b",
         }
         # Map legacy/UI model names to valid Groq models
         GROQ_MODEL_MAP = {
-            "qwen/qwen3.6-27b": "llama-3.3-70b-versatile",
-            "openai/gpt-oss-120b": "llama-3.3-70b-versatile",
-            "openai/gpt-oss-20b": "llama-3.1-8b-instant",
+            "llama-3.3-70b-versatile": "openai/gpt-oss-120b",
+            "llama-3.1-8b-instant": "openai/gpt-oss-20b",
+            "deepseek-r1-distill-llama-70b": "qwen/qwen3.6-27b",
+            "gemma2-9b-it": "openai/gpt-oss-20b",
+            "qwen/qwen3.6-27b": "qwen/qwen3.6-27b",
+            "openai/gpt-oss-120b": "openai/gpt-oss-120b",
+            "openai/gpt-oss-20b": "openai/gpt-oss-20b",
         }
-        resolved_groq_model = GROQ_MODEL_MAP.get(user_model, user_model)
+        resolved_groq_model = GROQ_MODEL_MAP.get(user_model, "openai/gpt-oss-120b")
         # Fall back to a safe default if the resolved model is not in the allowlist
         if resolved_groq_model not in ALLOWED_GROQ_MODELS:
-            resolved_groq_model = "llama-3.3-70b-versatile"
+            resolved_groq_model = "openai/gpt-oss-120b"
 
         # Build prompt with user language preference
         messages = build_prompt(query=query, context_chunks=top_chunks, history=history, language=user_lang)
@@ -213,7 +217,7 @@ async def generate_chat_stream(
             
             # Use the asynchronous client under .aio (do NOT await the generator creation)
             stream = gemini_client.aio.models.generate_content_stream(
-                model='gemini-2.5-flash',
+                model='gemini-3.6-flash',
                 contents=gemini_prompt
             )
 
