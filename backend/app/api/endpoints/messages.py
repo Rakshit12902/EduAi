@@ -119,35 +119,21 @@ async def generate_chat_stream(
 
     # 2. RAG Pipeline
     try:
-        # Fetch the most recent READY document's filename in the chat to prioritize it if the user query is vague
-        latest_doc_filename = ""
-        async with db_session_factory() as db:
-            from app.models.document import Document
-            from app.models.enums import DocumentStatus
-            doc_res = await db.execute(
-                select(Document)
-                .where(Document.chat_id == chat_id, Document.status == DocumentStatus.READY)
-                .order_by(Document.created_at.desc())
-                .limit(1)
-            )
-            latest_doc = doc_res.scalars().first()
-            if latest_doc:
-                latest_doc_filename = latest_doc.filename
-
-        # Embed query
+        # Embed query and retrieve multi-document chunks
         try:
             query_vector = await embed_query(query)
             
-            # Retrieve chunks from Qdrant
-            search_query = query
-            if latest_doc_filename and latest_doc_filename.lower() not in query.lower():
-                # Append filename to internal retrieval query to trigger explicit filename matching
-                search_query = f"{query} {latest_doc_filename}"
-                
-            retrieved_chunks = await retrieve_chunks(user_id=str(user_id), chat_id=str(chat_id), query_vector=query_vector, query=search_query, top_k=20)
+            # Retrieve chunks across all uploaded documents in this chat
+            retrieved_chunks = await retrieve_chunks(
+                user_id=str(user_id), 
+                chat_id=str(chat_id), 
+                query_vector=query_vector, 
+                query=query, 
+                top_k=30
+            )
             
-            # Rerank chunks
-            top_chunks = await rerank_chunks(query=query, chunks=retrieved_chunks, top_n=5)
+            # Multi-document fair balancing and generous context window (top_n=15)
+            top_chunks = await rerank_chunks(query=query, chunks=retrieved_chunks, top_n=15)
         except Exception as rag_err:
             import logging
             logging.getLogger(__name__).warning(f"RAG retrieval warning, falling back to general knowledge: {rag_err}")
