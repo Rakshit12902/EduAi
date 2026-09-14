@@ -2,7 +2,7 @@
 
   <!-- HERO BANNER & LOGO -->
   <br />
-  <a href="https://edu-ai-omega-roan.vercel.app/login">
+  <a href="https://edu-ai-omega-roan.vercel.app/">
     <img src="https://raw.githubusercontent.com/andreasbm/readme-template/master/assets/star.gif" width="30" height="30" />
     <img src="https://readme-typing-svg.demolab.com?font=Outfit&weight=700&size=36&duration=3000&pause=1000&color=6366F1&center=true&vCenter=true&width=600&height=70&lines=EduAI+%E2%80%94+RAG+Teaching+Assistant;Grounded+Document+AI+Workspace;Groq+%2B+Gemini+2.0+Dual+Engine;Qdrant+3072-Dim+Vector+Search" alt="EduAI Typing Header" />
   </a>
