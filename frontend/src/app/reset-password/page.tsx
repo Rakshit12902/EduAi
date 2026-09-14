@@ -45,20 +45,34 @@ export default function ResetPasswordPage() {
     setError(null);
     setSuccessMsg(null);
 
-    const redirectUrl = `${window.location.origin}/reset-password`;
+    try {
+      const redirectUrl = `${window.location.origin}/reset-password`;
 
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: redirectUrl,
-    });
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: redirectUrl,
+      });
 
-    if (error) {
-      setError(error.message);
-    } else {
-      setSuccessMsg(
-        "A password reset link has been sent to your email! Please check your inbox and click the link to set your new password."
+      if (error) {
+        if (error.message.includes("504") || error.message.toLowerCase().includes("timeout")) {
+          setError(
+            "Connection timed out (504). Please verify your Supabase SMTP settings (Host: smtp.gmail.com, Port: 587, and Google App Password)."
+          );
+        } else {
+          setError(error.message);
+        }
+      } else {
+        setSuccessMsg(
+          "A password reset link has been sent to your email! Please check your inbox and click the link to set your new password."
+        );
+      }
+    } catch (err: any) {
+      setError(
+        err?.message ||
+          "Failed to contact Supabase Auth service. Please check your network or SMTP configuration."
       );
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   // Handler 2: Set New Password (after clicking link in email)
@@ -80,18 +94,23 @@ export default function ResetPasswordPage() {
       return;
     }
 
-    const { error } = await supabase.auth.updateUser({
-      password: newPassword,
-    });
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword,
+      });
 
-    if (error) {
-      setError(error.message);
+      if (error) {
+        setError(error.message);
+      } else {
+        setSuccessMsg("Password updated successfully! Redirecting you to login...");
+        setTimeout(() => {
+          router.push("/login?reset=success");
+        }, 2000);
+      }
+    } catch (err: any) {
+      setError(err?.message || "Failed to update password. Please try again.");
+    } finally {
       setLoading(false);
-    } else {
-      setSuccessMsg("Password updated successfully! Redirecting you to login...");
-      setTimeout(() => {
-        router.push("/login?reset=success");
-      }, 2000);
     }
   };
 

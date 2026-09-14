@@ -40,13 +40,26 @@ async def get_current_user(
         full_name = user_meta.get("full_name") or user_meta.get("name") or email.split("@")[0]
         avatar_url = user_meta.get("avatar_url") or user_meta.get("picture")
 
-        user = UserProfile(
-            id=user_uuid,
-            email=email,
-            full_name=full_name,
-            avatar_url=avatar_url
-        )
-        db.add(user)
+        # Check if a profile already exists for this email (e.g. Supabase user ID changed upon recreation)
+        email_result = await db.execute(select(UserProfile).where(UserProfile.email == email))
+        existing_by_email = email_result.scalars().first()
+        
+        if existing_by_email:
+            existing_by_email.id = user_uuid
+            if full_name:
+                existing_by_email.full_name = full_name
+            if avatar_url:
+                existing_by_email.avatar_url = avatar_url
+            user = existing_by_email
+        else:
+            user = UserProfile(
+                id=user_uuid,
+                email=email,
+                full_name=full_name,
+                avatar_url=avatar_url
+            )
+            db.add(user)
+
         try:
             await db.commit()
             await db.refresh(user)

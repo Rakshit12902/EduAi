@@ -31,25 +31,39 @@ export default function RegisterPage() {
     });
 
     if (error) {
-      setError(error.message);
+      if (error.message.toLowerCase().includes("already registered")) {
+        setError("This email address is already registered. Please log in instead.");
+      } else if (error.message.includes("504") || error.message.toLowerCase().includes("timeout")) {
+        setError("Sign-up timed out waiting for email delivery. Please ensure 'Confirm email' is turned OFF in Supabase for instant registration.");
+      } else {
+        setError(error.message);
+      }
       setLoading(false);
-    } else {
-      if (data.session) {
+      return;
+    }
+
+    // Supabase returns an empty identities array when an account with this email already exists
+    if (data?.user && data.user.identities && data.user.identities.length === 0) {
+      setError("An account with this email already exists. Please log in instead.");
+      setLoading(false);
+      return;
+    }
+
+    if (data.session) {
+      router.push("/dashboard");
+    } else if (data.user) {
+      // Automatically sign in if session wasn't returned directly (when confirm email is disabled)
+      const { error: signInErr } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      if (!signInErr) {
         router.push("/dashboard");
-      } else if (data.user) {
-        // Automatically sign in if session wasn't returned directly
-        const { error: signInErr } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
-        if (!signInErr) {
-          router.push("/dashboard");
-        } else {
-          router.push("/login?registered=true");
-        }
       } else {
         router.push("/login?registered=true");
       }
+    } else {
+      router.push("/login?registered=true");
     }
   };
 
