@@ -36,9 +36,19 @@ export default function RegisterPage() {
     } else {
       if (data.session) {
         router.push("/dashboard");
+      } else if (data.user) {
+        // Automatically sign in if session wasn't returned directly
+        const { error: signInErr } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+        if (!signInErr) {
+          router.push("/dashboard");
+        } else {
+          router.push("/login?registered=true");
+        }
       } else {
-        setMessage("Registration successful! Please check your email to verify your account.");
-        setLoading(false);
+        router.push("/login?registered=true");
       }
     }
   };
