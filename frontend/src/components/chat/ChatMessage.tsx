@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import axios from 'axios'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import { supabase } from '@/lib/supabase'
 
 export interface MessageSource {
@@ -185,8 +187,33 @@ export default function ChatMessage({
 
               {/* Message Text */}
               {content ? (
-                <div className="whitespace-pre-wrap text-slate-800 dark:text-slate-200 leading-relaxed font-normal">
-                  {cleanedContent}
+                <div className="text-slate-800 dark:text-slate-200 leading-relaxed font-normal">
+                  <ReactMarkdown
+                    remarkPlugins={[remarkGfm]}
+                    components={{
+                      h1: ({ children }) => <h1 className="text-base font-bold text-slate-900 dark:text-slate-100 mt-4 mb-2 first:mt-0">{children}</h1>,
+                      h2: ({ children }) => <h2 className="text-sm font-bold text-slate-900 dark:text-slate-100 mt-3 mb-1.5 first:mt-0">{children}</h2>,
+                      h3: ({ children }) => <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mt-3 mb-1.5 first:mt-0">{children}</h3>,
+                      p: ({ children }) => <p className="mb-2 leading-relaxed last:mb-0">{children}</p>,
+                      strong: ({ children }) => <strong className="font-semibold text-slate-900 dark:text-slate-100">{children}</strong>,
+                      ul: ({ children }) => <ul className="list-disc list-outside pl-5 space-y-1 mb-2.5">{children}</ul>,
+                      ol: ({ children }) => <ol className="list-decimal list-outside pl-5 space-y-1 mb-2.5">{children}</ol>,
+                      li: ({ children }) => <li className="leading-relaxed">{children}</li>,
+                      code: ({ children, className }) => {
+                        const isBlock = className?.includes('language-')
+                        if (isBlock) {
+                          return <code className="block p-3 rounded-xl bg-slate-950 text-slate-100 text-xs font-mono overflow-x-auto my-2">{children}</code>
+                        }
+                        return <code className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 text-xs font-mono">{children}</code>
+                      },
+                      blockquote: ({ children }) => <blockquote className="border-l-2 border-emerald-500 pl-3 italic text-slate-600 dark:text-slate-400 my-2">{children}</blockquote>,
+                      table: ({ children }) => <div className="overflow-x-auto my-3"><table className="w-full text-xs text-left border-collapse border border-slate-200 dark:border-slate-700">{children}</table></div>,
+                      th: ({ children }) => <th className="bg-slate-100 dark:bg-slate-800 px-3 py-2 border border-slate-200 dark:border-slate-700 font-semibold text-slate-900 dark:text-slate-100">{children}</th>,
+                      td: ({ children }) => <td className="px-3 py-2 border border-slate-200 dark:border-slate-700">{children}</td>,
+                    }}
+                  >
+                    {cleanedContent}
+                  </ReactMarkdown>
                 </div>
               ) : (
                 <div className="flex items-center gap-2 text-slate-400 dark:text-slate-500 italic py-1">

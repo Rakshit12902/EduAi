@@ -310,30 +310,24 @@ def build_prompt(query: str, context_chunks: List[Any], history: List[Dict[str, 
     Then provide a concise, well-organized overview of the important sections.
 
     ==================================================
-    4. FORMATTING RULES
+    4. FORMATTING RULES & STRUCTURE
     ==================================================
 
-    Use clean, readable Markdown.
+    Use clean, readable, well-structured Markdown.
 
-    Preferred formatting:
+    CRITICAL RULES FOR CLEAN STRUCTURE:
+    - NEVER dump an entire response as a single repetitive bulleted list where every line starts with `- **Section Name** - ...`.
+    - When providing an overview or summary of a document, organize it into logical sections using Markdown subheadings (e.g. `### Profile Summary`, `### Education`, `### Core Projects`, `### Technical Skills`).
+    - Under each heading, use natural explanatory sentences or clean, concise bullet points.
+    - Do NOT overuse bold asterisks (`**`). Use bolding purposefully for item names, not for every word or every bullet prefix.
+    - NEVER append trailing source disclaimers like `(Information sourced from the PDF.)` or `(From the uploaded document.)` at the end of responses. The user interface already displays a dedicated grounding badge.
 
-    - Normal paragraphs
-    - Short headings when useful
-    - Bullet points when listing information
-    - Numbered lists for sequential steps
-    - Markdown tables ONLY when a table genuinely improves understanding
-
-    Do NOT use a table simply because the document contains multiple fields.
-
-    For example, if the user asks for skills, use a bullet list rather than a table.
-
-    Use tables only for things such as:
-
-    - Comparing two or more documents
-    - Comparing technologies
-    - Comparing courses
-    - Comparing multiple projects
-    - Structured data where rows and columns genuinely improve readability
+    Preferred formatting elements:
+    - Clear subheadings (`### Section`)
+    - Normal paragraphs for descriptions
+    - Short bullet points when listing items
+    - Numbered lists for sequential projects or steps
+    - Markdown tables ONLY when a table genuinely improves understanding (e.g. comparisons)
 
     ==================================================
     5. ABSOLUTELY NO RAW HTML
@@ -474,14 +468,39 @@ def build_prompt(query: str, context_chunks: List[Any], history: List[Dict[str, 
     - **Driver Drowsiness Detection System** — A computer-vision project focused on detecting eye closure and generating alerts.
 
     Do not automatically include:
-
     - Education
     - Contact information
     - Certifications
     - Skills
     - Achievements
-
     unless they are relevant to the question.
+
+    If the user asks for a general overview or summary ("Summarize my resume", "What is in this document?"):
+    Use clear markdown headings with clean paragraphs or categorized sub-bullets.
+
+    GOOD:
+    ### Profile Summary
+    Computer Science undergraduate with practical experience in AI, ML, and Data Science, building RAG pipelines and predictive models.
+
+    ### Education
+    - **B.Tech in Computer Science** — Allenhouse Institute of Technology (Expected 2027, CGPA 7.8)
+    - **Intermediate** — Durgaprasad Vidyaniketan (2023)
+
+    ### Core Projects
+    1. **House Price Prediction System** — ML regression pipeline with feature engineering.
+    2. **Driver Drowsiness Detection** — Real-time OpenCV eye-closure detection and alarm system.
+
+    ### Technical Skills
+    - **Languages**: Python, C++, Java
+    - **Frameworks**: FastAPI, Flask, Scikit-learn, OpenCV
+    - **Databases**: PostgreSQL, MySQL, Qdrant
+
+    BAD (Do NOT do this):
+    - **Profile Summary** – ...
+    - **Education** – ...
+    - **Skills** – ...
+    - **Projects** – ...
+    (Information sourced from the PDF.)
 
     ==================================================
     9. MULTIPLE DOCUMENTS
