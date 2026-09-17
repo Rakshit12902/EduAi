@@ -1,10 +1,11 @@
-import logging
 import asyncio
-from typing import List, Dict, Any, Optional
-from qdrant_client.models import Filter, FieldCondition, MatchValue
+import logging
 from groq import AsyncGroq
 from app.core.config import settings
+from typing import List, Dict, Any, Optional
 from app.core.qdrant import qdrant_client, COLLECTION_NAME
+from qdrant_client.models import Filter, FieldCondition, MatchValue
+from qdrant_client.http.models import ScoredPoint
 
 logger = logging.getLogger(__name__)
 
@@ -72,16 +73,501 @@ async def retrieve_chunks(user_id: str, chat_id: str, query_vector: List[float],
             query_lower = query.lower()
             
             # Common document type synonyms
-            RESUME_TERMS = {"resume", "cv", "curriculum", "bio", "profile", "experience", "education", "skills", "projects"}
-            CERT_TERMS = {"certificate", "certification", "cert", "udemy", "course", "degree", "diploma", "credential", "id"}
+            # -----------------------------------------
+
+            RESUME_TERMS = {
+                # Resume / CV
+                "resume","resumé","cv","curriculum vitae","curriculum","bio","biography",
+                "profile","professional profile","career profile","candidate profile",
+
+                # Experience
+                "experience","work experience","employment","employment history",
+                "work history","professional experience","career history","job history",
+                "internship","internships","internship experience",
+
+                # Education
+                "education","educational background","academic background","academic history",
+                "qualification","qualifications","academic qualification","educational qualification",
+                "degree","degrees","university","college","school",
+
+                # Skills
+                "skill",
+                "skills",
+                "technical skills",
+                "soft skills",
+                "core skills",
+                "key skills",
+                "competencies",
+                "competence",
+                "expertise",
+                "technical expertise",
+                "professional skills",
+                "programming skills",
+                "technical knowledge",
+
+                # Projects
+                "project",
+                "projects",
+                "academic project",
+                "academic projects",
+                "personal project",
+                "personal projects",
+                "professional project",
+                "portfolio project",
+                "project experience",
+
+                # Career
+                "career",
+                "career objective",
+                "objective",
+                "career summary",
+                "professional summary",
+                "profile summary",
+                "summary",
+                "about me",
+
+                # Achievements
+                "achievement",
+                "achievements",
+                "accomplishment",
+                "accomplishments",
+                "awards",
+                "award",
+                "honors",
+                "honours",
+                "recognition",
+
+                # Other resume sections
+                "contact",
+                "contact information",
+                "personal details",
+                "personal information",
+                "email",
+                "phone",
+                "linkedin",
+                "github",
+                "portfolio",
+                "publications",
+                "publication",
+                "research",
+                "research experience",
+                "volunteering",
+                "volunteer experience",
+                "extracurricular",
+                "extracurricular activities",
+                "languages",
+                "interests",
+                "hobbies",
+                "references",
+            }
+
+
+            CERT_TERMS = {
+                # Certificate
+                "certificate",
+                "certificates",
+                "certification",
+                "certifications",
+                "cert",
+                "credential",
+                "credentials",
+                "certificate of completion",
+                "certificate of achievement",
+                "completion certificate",
+                "professional certificate",
+                "course certificate",
+
+                # Courses
+                "course",
+                "courses",
+                "online course",
+                "online courses",
+                "training",
+                "trainings",
+                "training program",
+                "bootcamp",
+                "boot camp",
+                "workshop",
+                "workshops",
+                "program",
+                "learning program",
+
+                # Education credentials
+                "degree",
+                "degrees",
+                "diploma",
+                "diplomas",
+                "qualification",
+                "qualifications",
+                "academic credential",
+                "academic credentials",
+
+                # Certificate metadata
+                "certificate id",
+                "certificate number",
+                "credential id",
+                "credential number",
+                "certification id",
+                "certification number",
+                "credential code",
+                "certificate code",
+                "verification code",
+                "verification id",
+                "license number",
+                "license",
+
+                # Common certificate providers
+                "udemy",
+                "coursera",
+                "edx",
+                "linkedin learning",
+                "google certification",
+                "microsoft certification",
+                "aws certification",
+                "ibm certification",
+                "oracle certification",
+                "meta certification",
+                "nptel",
+                "forage",
+                "simplilearn",
+                "great learning",
+                "upgrad",
+                "coding ninjas",
+                "codewithharry",
+
+                # Certificate actions
+                "certified",
+                "certified in",
+                "completed",
+                "completion",
+                "earned",
+                "credentialed",
+                "accredited",
+                "accreditation",
+                "verification",
+                "verify certificate",
+                "verify credential",
+            }
+
+
+            NOTES_TERMS = {
+                # General notes
+                "note",
+                "notes",
+                "study notes",
+                "class notes",
+                "lecture notes",
+                "personal notes",
+                "revision notes",
+                "handwritten notes",
+                "digital notes",
+                "course notes",
+
+                # Study material
+                "study material",
+                "study materials",
+                "study guide",
+                "study guides",
+                "learning material",
+                "learning materials",
+                "reading material",
+                "reference material",
+                "academic material",
+
+                # Academic
+                "lecture",
+                "lectures",
+                "lesson",
+                "lessons",
+                "chapter notes",
+                "topic notes",
+                "subject notes",
+                "unit notes",
+                "semester notes",
+                "classroom notes",
+
+                # Revision
+                "revision",
+                "revision material",
+                "quick revision",
+                "revision guide",
+                "cheat sheet",
+                "formula sheet",
+                "short notes",
+                "summary notes",
+
+                # Questions / preparation
+                "question bank",
+                "question paper",
+                "practice questions",
+                "practice paper",
+                "important questions",
+                "exam notes",
+                "exam preparation",
+                "exam prep",
+                "study plan",
+            }
+
+
+            ASSIGNMENT_TERMS = {
+                "assignment",
+                "assignments",
+                "homework",
+                "task",
+                "tasks",
+                "academic task",
+                "college assignment",
+                "university assignment",
+                "coursework",
+                "course work",
+                "classwork",
+                "class work",
+                "project work",
+                "lab assignment",
+                "practical assignment",
+                "submission",
+                "academic submission",
+                "written assignment",
+                "case study",
+                "case studies",
+                "problem statement",
+                "questions",
+                "answers",
+            }
+
+
+            RESEARCH_TERMS = {
+                "research",
+                "research paper",
+                "research papers",
+                "paper",
+                "papers",
+                "journal",
+                "journal paper",
+                "journal article",
+                "article",
+                "academic paper",
+                "academic article",
+                "publication",
+                "publications",
+                "conference paper",
+                "conference publication",
+                "thesis",
+                "theses",
+                "dissertation",
+                "research report",
+                "literature review",
+                "systematic review",
+                "survey paper",
+                "review paper",
+                "research proposal",
+                "abstract",
+                "methodology",
+                "experiment",
+                "experimental study",
+                "findings",
+                "results",
+                "discussion",
+                "references",
+                "bibliography",
+            }
+
+
+            REPORT_TERMS = {
+                "report",
+                "reports",
+                "project report",
+                "project reports",
+                "technical report",
+                "technical reports",
+                "research report",
+                "research reports",
+                "final report",
+                "progress report",
+                "status report",
+                "internship report",
+                "industrial training report",
+                "academic report",
+                "college report",
+                "university report",
+                "lab report",
+                "laboratory report",
+                "case report",
+                "analysis report",
+                "business report",
+                "project documentation",
+                "documentation",
+            }
+
+
+            PRESENTATION_TERMS = {
+                "presentation",
+                "presentations",
+                "ppt",
+                "pptx",
+                "slides",
+                "slide deck",
+                "deck",
+                "powerpoint",
+                "power point",
+                "presentation slides",
+                "lecture slides",
+                "class slides",
+                "seminar",
+                "seminar presentation",
+                "conference presentation",
+                "pitch deck",
+                "project presentation",
+                "academic presentation",
+            }
+
+
+            RESUME_SECTION_TERMS = {
+                "objective",
+                "summary",
+                "profile",
+                "experience",
+                "education",
+                "skills",
+                "projects",
+                "achievements",
+                "certifications",
+                "awards",
+                "internships",
+                "publications",
+                "research",
+                "volunteering",
+                "languages",
+                "interests",
+                "references",
+                "contact",
+            }
+
+
+            LEGAL_TERMS = {
+                "agreement",
+                "contract",
+                "legal document",
+                "legal agreement",
+                "terms",
+                "terms and conditions",
+                "terms of service",
+                "privacy policy",
+                "policy",
+                "policies",
+                "license agreement",
+                "lease",
+                "rental agreement",
+                "employment agreement",
+                "offer letter",
+                "appointment letter",
+                "nda",
+                "non disclosure agreement",
+                "affidavit",
+                "declaration",
+                "notice",
+                "legal notice",
+                "memorandum",
+                "memorandum of understanding",
+                "mou",
+            }
+
+
+            MANUAL_TERMS = {
+                "manual",
+                "user manual",
+                "user guide",
+                "guide",
+                "guidelines",
+                "instruction",
+                "instructions",
+                "documentation",
+                "technical documentation",
+                "reference guide",
+                "handbook",
+                "employee handbook",
+                "installation guide",
+                "setup guide",
+                "configuration guide",
+                "developer guide",
+                "administration guide",
+                "operating instructions",
+                "standard operating procedure",
+                "sop",
+            }
+
+
+            BOOK_TERMS = {
+                "book",
+                "textbook",
+                "ebook",
+                "e-book",
+                "novel",
+                "chapter",
+                "chapters",
+                "reference book",
+                "academic book",
+                "course textbook",
+                "study book",
+                "workbook",
+                "reference material",
+            }
+
+
+            SYLLABUS_TERMS = {
+                "syllabus",
+                "course syllabus",
+                "curriculum",
+                "course curriculum",
+                "course outline",
+                "course structure",
+                "subject outline",
+                "academic syllabus",
+                "semester syllabus",
+                "unit",
+                "units",
+                "course objectives",
+                "learning objectives",
+                "learning outcomes",
+                "course outcomes",
+                "topics",
+                "course topics",
+                "modules",
+                "course modules",
+            }
+
+
+            JOB_DESCRIPTION_TERMS = {
+                "job description",
+                "job descriptions",
+                "jd",
+                "job posting",
+                "job post",
+                "job listing",
+                "vacancy",
+                "vacancies",
+                "opening",
+                "job opening",
+                "position",
+                "role",
+                "responsibilities",
+                "job responsibilities",
+                "requirements",
+                "qualifications required",
+                "required skills",
+                "preferred skills",
+                "eligibility",
+                "eligibility criteria",
+                "experience required",
+                "technical requirements",
+                "job profile",
+            }
             
             # Group points by filename
             by_file: Dict[str, List[Any]] = {}
             for fp in all_chat_points:
                 fn = fp.payload.get("filename", "")
                 by_file.setdefault(fn, []).append(fp)
-                
-            from qdrant_client.http.models import ScoredPoint
             
             # Ensure chunks from every document in this chat are represented
             for fn, fps in by_file.items():

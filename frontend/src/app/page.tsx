@@ -62,7 +62,7 @@ export default function LandingPage({ initialSection }: LandingPageProps = {}) {
       email: 'rakshitkatiyar9@gmail.com'
     },
     aashika: {
-      name: 'Aashika kumari',
+      name: 'Aashika Kumari',
       role: 'Product & UX Lead',
       image: '/images/team-aashika.png',
       bio: 'Passionate about transforming ideas into simple, intuitive experiences that make learning more engaging and accessible.',
@@ -345,9 +345,12 @@ export default function LandingPage({ initialSection }: LandingPageProps = {}) {
             </Link>
             <Link
               href="/login"
-              className="px-5 py-2.5 rounded-full text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 shadow-md shadow-indigo-500/20 hover:shadow-lg hover:shadow-indigo-500/30 hover:-translate-y-0.5 transition-all"
+              className="px-5 py-2.5 rounded-full text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 shadow-md shadow-indigo-500/20 hover:shadow-lg hover:shadow-indigo-500/30 hover:-translate-y-0.5 transition-all flex items-center gap-1.5"
             >
-              Get Started
+              <span>Get Started</span>
+              <svg className="w-3.5 h-3.5 fill-none stroke-current stroke-2" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
+              </svg>
             </Link>
           </div>
         </div>
@@ -658,10 +661,10 @@ export default function LandingPage({ initialSection }: LandingPageProps = {}) {
 
           {/* Extended Feature Deep Dive Grid */}
           <div className="pt-12 border-t border-slate-200/60 space-y-8">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="flex flex-col items-start gap-4">
               <div>
                 <h3 className="text-2xl font-extrabold text-slate-900">Deep-Dive Capabilities</h3>
-                <p className="text-xs sm:text-sm text-slate-500">Explore advanced RAG vector search, dual-LLM streaming, and security parameters.</p>
+                <p className="text-xs sm:text-sm text-slate-500 mt-1">Explore advanced RAG vector search, dual-LLM streaming, and security parameters.</p>
               </div>
 
               {/* Category Filter Pills */}
@@ -709,7 +712,7 @@ export default function LandingPage({ initialSection }: LandingPageProps = {}) {
                           {feat.icon === 'lock' && <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/>}
                         </svg>
                       </div>
-                      <span className={`px-3 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wide border ${feat.badgeBg} group-hover:scale-105 transition-transform`}>
+                      <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${feat.badgeBg} transition-colors`}>
                         {feat.subtitle}
                       </span>
                     </div>
@@ -787,29 +790,29 @@ export default function LandingPage({ initialSection }: LandingPageProps = {}) {
             {/* Dashed SVG Arrow Connectors (Desktop) */}
             <div className="hidden lg:block absolute top-[120px] left-[23%] z-20 pointer-events-none">
               <svg className="w-16 h-8 text-indigo-300 fill-none" viewBox="0 0 60 30">
-                <path d="M5 15 Q 30 5, 55 15" stroke="currentColor" strokeWidth="2" strokeDasharray="4 4" />
-                <path d="M50 10 L 56 15 L 49 19" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                <path d="M5 15 Q 30 8, 55 15" stroke="currentColor" strokeWidth="2" strokeDasharray="4 4" />
+                <path d="M50 11 L 56 15 L 49 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             </div>
 
             <div className="hidden lg:block absolute top-[120px] left-[48%] z-20 pointer-events-none">
               <svg className="w-16 h-8 text-indigo-300 fill-none" viewBox="0 0 60 30">
-                <path d="M5 15 Q 30 25, 55 15" stroke="currentColor" strokeWidth="2" strokeDasharray="4 4" />
-                <path d="M50 10 L 56 15 L 49 19" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                <path d="M5 15 Q 30 8, 55 15" stroke="currentColor" strokeWidth="2" strokeDasharray="4 4" />
+                <path d="M50 11 L 56 15 L 49 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             </div>
 
             <div className="hidden lg:block absolute top-[120px] left-[73%] z-20 pointer-events-none">
               <svg className="w-16 h-8 text-indigo-300 fill-none" viewBox="0 0 60 30">
-                <path d="M5 15 Q 30 5, 55 15" stroke="currentColor" strokeWidth="2" strokeDasharray="4 4" />
-                <path d="M50 10 L 56 15 L 49 19" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                <path d="M5 15 Q 30 8, 55 15" stroke="currentColor" strokeWidth="2" strokeDasharray="4 4" />
+                <path d="M50 11 L 56 15 L 49 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             </div>
 
             {/* CARD 1: STEP 1 - UPLOAD YOUR DOCUMENTS */}
             <div className="bg-[#f4f7ff] border border-blue-100/90 rounded-2xl p-6 shadow-xs hover:shadow-lg transition-all duration-300 flex flex-col justify-between space-y-6 relative group">
               
-              <div className="space-y-4">
+              <div className="space-y-4 flex-1">
                 <div className="w-8 h-8 rounded-full bg-blue-600 text-white font-bold text-sm flex items-center justify-center shadow-xs">
                   1
                 </div>
@@ -833,7 +836,7 @@ export default function LandingPage({ initialSection }: LandingPageProps = {}) {
                 </div>
 
                 <div>
-                  <h3 className="text-lg font-bold text-slate-900 mb-1.5 group-hover:text-blue-600 transition-colors">
+                  <h3 className="text-lg font-bold text-slate-900 mb-1.5 group-hover:text-blue-600 transition-colors min-h-[3.5rem] flex items-start">
                     Upload Your Documents
                   </h3>
                   <p className="text-xs text-slate-500 leading-relaxed">
@@ -854,7 +857,7 @@ export default function LandingPage({ initialSection }: LandingPageProps = {}) {
             {/* CARD 2: STEP 2 - ASK YOUR QUESTIONS */}
             <div className="bg-[#faf7ff] border border-purple-100/90 rounded-2xl p-6 shadow-xs hover:shadow-lg transition-all duration-300 flex flex-col justify-between space-y-6 relative group">
               
-              <div className="space-y-4">
+              <div className="space-y-4 flex-1">
                 <div className="w-8 h-8 rounded-full bg-indigo-600 text-white font-bold text-sm flex items-center justify-center shadow-xs">
                   2
                 </div>
@@ -879,7 +882,7 @@ export default function LandingPage({ initialSection }: LandingPageProps = {}) {
                 </div>
 
                 <div>
-                  <h3 className="text-lg font-bold text-slate-900 mb-1.5 group-hover:text-indigo-600 transition-colors">
+                  <h3 className="text-lg font-bold text-slate-900 mb-1.5 group-hover:text-indigo-600 transition-colors min-h-[3.5rem] flex items-start">
                     Ask Your Questions
                   </h3>
                   <p className="text-xs text-slate-500 leading-relaxed">
@@ -900,7 +903,7 @@ export default function LandingPage({ initialSection }: LandingPageProps = {}) {
             {/* CARD 3: STEP 3 - AI FINDS RELEVANT INFORMATION */}
             <div className="bg-[#f4fbf7] border border-emerald-100/90 rounded-2xl p-6 shadow-xs hover:shadow-lg transition-all duration-300 flex flex-col justify-between space-y-6 relative group">
               
-              <div className="space-y-4">
+              <div className="space-y-4 flex-1">
                 <div className="w-8 h-8 rounded-full bg-emerald-500 text-white font-bold text-sm flex items-center justify-center shadow-xs">
                   3
                 </div>
@@ -920,7 +923,7 @@ export default function LandingPage({ initialSection }: LandingPageProps = {}) {
                 </div>
 
                 <div>
-                  <h3 className="text-lg font-bold text-slate-900 mb-1.5 group-hover:text-emerald-600 transition-colors">
+                  <h3 className="text-lg font-bold text-slate-900 mb-1.5 group-hover:text-emerald-600 transition-colors min-h-[3.5rem] flex items-start">
                     AI Finds Relevant Information
                   </h3>
                   <p className="text-xs text-slate-500 leading-relaxed">
@@ -941,7 +944,7 @@ export default function LandingPage({ initialSection }: LandingPageProps = {}) {
             {/* CARD 4: STEP 4 - GET CLEAR ANSWERS WITH SOURCES */}
             <div className="bg-[#fff5f8] border border-pink-100/90 rounded-2xl p-6 shadow-xs hover:shadow-lg transition-all duration-300 flex flex-col justify-between space-y-6 relative group">
               
-              <div className="space-y-4">
+              <div className="space-y-4 flex-1">
                 <div className="w-8 h-8 rounded-full bg-pink-500 text-white font-bold text-sm flex items-center justify-center shadow-xs">
                   4
                 </div>
@@ -972,7 +975,7 @@ export default function LandingPage({ initialSection }: LandingPageProps = {}) {
                 </div>
 
                 <div>
-                  <h3 className="text-lg font-bold text-slate-900 mb-1.5 group-hover:text-pink-600 transition-colors">
+                  <h3 className="text-lg font-bold text-slate-900 mb-1.5 group-hover:text-pink-600 transition-colors min-h-[3.5rem] flex items-start">
                     Get Clear Answers with Sources
                   </h3>
                   <p className="text-xs text-slate-500 leading-relaxed">
@@ -1299,7 +1302,7 @@ export default function LandingPage({ initialSection }: LandingPageProps = {}) {
                       el.scrollIntoView({ behavior: 'smooth' })
                     }
                   }}
-                  className="inline-flex items-center gap-2 text-xs font-bold text-indigo-600 hover:text-indigo-700 bg-indigo-50 px-4 py-2 rounded-full border border-indigo-100 transition-all cursor-pointer hover:bg-indigo-100"
+                  className="inline-flex items-center gap-2 text-sm font-bold text-indigo-600 hover:text-indigo-700 bg-white px-6 py-3 rounded-full border border-indigo-300 hover:border-indigo-400 transition-all cursor-pointer hover:bg-indigo-50 shadow-xs hover:shadow-sm"
                 >
                   <span>View All Frequently Asked Questions</span>
                   <span>→</span>
@@ -1326,7 +1329,7 @@ export default function LandingPage({ initialSection }: LandingPageProps = {}) {
 
                 <a
                   href="mailto:support@eduai.com"
-                  className="w-full py-3 px-4 rounded-xl text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 shadow-md shadow-indigo-500/20 transition-all flex items-center justify-center gap-2"
+                  className="w-full py-3 px-4 rounded-xl text-xs font-bold text-indigo-600 bg-white hover:bg-indigo-50 border border-indigo-300 hover:border-indigo-400 transition-all flex items-center justify-center gap-2 shadow-xs"
                 >
                   <span>Contact Support</span>
                   <svg className="w-4 h-4 fill-none stroke-current stroke-2" viewBox="0 0 24 24">
@@ -1575,7 +1578,7 @@ export default function LandingPage({ initialSection }: LandingPageProps = {}) {
                       className="w-full h-full object-cover object-top"
                     />
                   </div>
-                  <div className="space-y-1.5 flex-1 min-w-0">
+                  <div className="space-y-2 flex-1 min-w-0">
                     <h4 className="text-xl sm:text-2xl font-headline-lg font-bold text-slate-900 group-hover:text-indigo-600 transition-colors tracking-tight truncate">
                       Rakshit Katiyar
                     </h4>
@@ -1584,21 +1587,24 @@ export default function LandingPage({ initialSection }: LandingPageProps = {}) {
                         Founder & CEO
                       </span>
                     </div>
-                    <p className="text-xs sm:text-sm text-slate-500 leading-relaxed font-normal pt-1 line-clamp-2">
+                    <p className="text-xs sm:text-sm text-slate-500 leading-relaxed font-normal pt-0.5 line-clamp-2">
                       Passionate about AI, data, and building solutions that make a real impact in people&apos;s lives.
                     </p>
+                    <div className="flex flex-wrap items-center gap-1.5 pt-1.5">
+                      {teamData.rakshit.tags.map((tag) => (
+                        <span key={tag} className="text-[10px] font-semibold text-slate-500 bg-slate-50 px-2 py-0.5 rounded-md border border-slate-200/60">
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
                   </div>
                 </div>
 
-                {/* Card Footer: Focus tags + Direct Actions */}
-                <div className="flex items-center justify-between gap-3 pt-5 mt-4 border-t border-slate-100 relative z-10">
-                  <div className="flex flex-wrap items-center gap-1.5">
-                    {teamData.rakshit.tags.map((tag) => (
-                      <span key={tag} className="text-[10px] font-semibold text-slate-500 bg-slate-50 px-2 py-0.5 rounded-md border border-slate-200/60">
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
+                {/* Card Footer: View profile link + Direct Actions */}
+                <div className="flex items-center justify-between gap-3 pt-4 mt-5 border-t border-slate-100 relative z-10">
+                  <span className="text-xs text-slate-400 group-hover:text-indigo-600 font-medium transition-colors flex items-center gap-1">
+                    View profile <span className="transition-transform group-hover:translate-x-1">→</span>
+                  </span>
 
                   <div className="flex items-center gap-2 shrink-0">
                     <a
@@ -1606,7 +1612,7 @@ export default function LandingPage({ initialSection }: LandingPageProps = {}) {
                       target="_blank"
                       rel="noopener noreferrer"
                       onClick={(e) => e.stopPropagation()}
-                      className="w-8 h-8 rounded-full bg-slate-50 hover:bg-[#0A66C2] text-slate-400 hover:text-white border border-slate-200/80 flex items-center justify-center transition-all duration-200 shadow-2xs hover:scale-110 active:scale-95"
+                      className="w-8 h-8 rounded-full bg-white hover:bg-[#0A66C2] text-slate-600 hover:text-white border border-slate-300 flex items-center justify-center transition-all duration-200 shadow-2xs hover:scale-110 active:scale-95"
                       aria-label="Rakshit Katiyar LinkedIn"
                       title="Connect on LinkedIn"
                     >
@@ -1617,7 +1623,7 @@ export default function LandingPage({ initialSection }: LandingPageProps = {}) {
                     <a
                       href={`mailto:${teamData.rakshit.email}`}
                       onClick={(e) => e.stopPropagation()}
-                      className="w-8 h-8 rounded-full bg-slate-50 hover:bg-indigo-600 text-slate-400 hover:text-white border border-slate-200/80 flex items-center justify-center transition-all duration-200 shadow-2xs hover:scale-110 active:scale-95"
+                      className="w-8 h-8 rounded-full bg-white hover:bg-indigo-600 text-slate-600 hover:text-white border border-slate-300 flex items-center justify-center transition-all duration-200 shadow-2xs hover:scale-110 active:scale-95"
                       aria-label="Email Rakshit Katiyar"
                       title="Send email to Rakshit"
                     >
@@ -1629,7 +1635,7 @@ export default function LandingPage({ initialSection }: LandingPageProps = {}) {
                 </div>
               </div>
 
-              {/* Member 2: Aashika kumari */}
+              {/* Member 2: Aashika Kumari */}
               <div 
                 onClick={() => openTeamModal('aashika')}
                 className="bg-white/90 backdrop-blur-md rounded-[28px] p-6 sm:p-7 border border-slate-200/80 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] hover:shadow-[0_20px_40px_-8px_rgba(79,70,229,0.15)] hover:border-indigo-300 hover:-translate-y-1.5 active:scale-[0.99] transition-all duration-300 ease-out flex flex-col justify-between group cursor-pointer relative overflow-hidden"
@@ -1641,34 +1647,37 @@ export default function LandingPage({ initialSection }: LandingPageProps = {}) {
                   <div className="w-20 h-20 sm:w-22 sm:h-22 rounded-2xl ring-4 ring-white shadow-md overflow-hidden shrink-0 group-hover:scale-105 group-hover:shadow-lg transition-all duration-300 bg-slate-100 border border-slate-200/60">
                     <img
                       src="/images/team-aashika.png"
-                      alt="Aashika kumari"
+                      alt="Aashika Kumari"
                       className="w-full h-full object-cover object-top"
                     />
                   </div>
-                  <div className="space-y-1.5 flex-1 min-w-0">
+                  <div className="space-y-2 flex-1 min-w-0">
                     <h4 className="text-xl sm:text-2xl font-headline-lg font-bold text-slate-900 group-hover:text-indigo-600 transition-colors tracking-tight truncate">
-                      Aashika kumari
+                      Aashika Kumari
                     </h4>
                     <div>
                       <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-50 text-indigo-600 border border-indigo-100">
                         Co-Founder & Product
                       </span>
                     </div>
-                    <p className="text-xs sm:text-sm text-slate-500 leading-relaxed font-normal pt-1 line-clamp-2">
+                    <p className="text-xs sm:text-sm text-slate-500 leading-relaxed font-normal pt-0.5 line-clamp-2">
                       Focused on creating user-centric experiences that make learning simple and accessible.
                     </p>
+                    <div className="flex flex-wrap items-center gap-1.5 pt-1.5">
+                      {teamData.aashika.tags.map((tag) => (
+                        <span key={tag} className="text-[10px] font-semibold text-slate-500 bg-slate-50 px-2 py-0.5 rounded-md border border-slate-200/60">
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
                   </div>
                 </div>
 
-                {/* Card Footer: Focus tags + Direct Actions */}
-                <div className="flex items-center justify-between gap-3 pt-5 mt-4 border-t border-slate-100 relative z-10">
-                  <div className="flex flex-wrap items-center gap-1.5">
-                    {teamData.aashika.tags.map((tag) => (
-                      <span key={tag} className="text-[10px] font-semibold text-slate-500 bg-slate-50 px-2 py-0.5 rounded-md border border-slate-200/60">
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
+                {/* Card Footer: View profile link + Direct Actions */}
+                <div className="flex items-center justify-between gap-3 pt-4 mt-5 border-t border-slate-100 relative z-10">
+                  <span className="text-xs text-slate-400 group-hover:text-indigo-600 font-medium transition-colors flex items-center gap-1">
+                    View profile <span className="transition-transform group-hover:translate-x-1">→</span>
+                  </span>
 
                   <div className="flex items-center gap-2 shrink-0">
                     <a
@@ -1676,8 +1685,8 @@ export default function LandingPage({ initialSection }: LandingPageProps = {}) {
                       target="_blank"
                       rel="noopener noreferrer"
                       onClick={(e) => e.stopPropagation()}
-                      className="w-8 h-8 rounded-full bg-slate-50 hover:bg-[#0A66C2] text-slate-400 hover:text-white border border-slate-200/80 flex items-center justify-center transition-all duration-200 shadow-2xs hover:scale-110 active:scale-95"
-                      aria-label="Aashika kumari LinkedIn"
+                      className="w-8 h-8 rounded-full bg-white hover:bg-[#0A66C2] text-slate-600 hover:text-white border border-slate-300 flex items-center justify-center transition-all duration-200 shadow-2xs hover:scale-110 active:scale-95"
+                      aria-label="Aashika Kumari LinkedIn"
                       title="Connect on LinkedIn"
                     >
                       <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
@@ -1687,8 +1696,8 @@ export default function LandingPage({ initialSection }: LandingPageProps = {}) {
                     <a
                       href={`mailto:${teamData.aashika.email}`}
                       onClick={(e) => e.stopPropagation()}
-                      className="w-8 h-8 rounded-full bg-slate-50 hover:bg-indigo-600 text-slate-400 hover:text-white border border-slate-200/80 flex items-center justify-center transition-all duration-200 shadow-2xs hover:scale-110 active:scale-95"
-                      aria-label="Email Aashika kumari"
+                      className="w-8 h-8 rounded-full bg-white hover:bg-indigo-600 text-slate-600 hover:text-white border border-slate-300 flex items-center justify-center transition-all duration-200 shadow-2xs hover:scale-110 active:scale-95"
+                      aria-label="Email Aashika Kumari"
                       title="Send email to Aashika"
                     >
                       <svg className="w-3.5 h-3.5 fill-none stroke-current stroke-2" viewBox="0 0 24 24">
@@ -1713,9 +1722,12 @@ export default function LandingPage({ initialSection }: LandingPageProps = {}) {
             <div className="pt-2 flex justify-center gap-4">
               <Link
                 href="/login"
-                className="px-8 py-3.5 rounded-full text-base font-bold text-indigo-600 bg-white hover:bg-indigo-50 shadow-lg hover:shadow-xl transition-all hover:scale-105"
+                className="px-8 py-3.5 rounded-full text-base font-bold text-indigo-600 bg-white hover:bg-indigo-50 shadow-lg hover:shadow-xl transition-all hover:scale-105 flex items-center gap-2 group"
               >
-                Start Learning Now — It&apos;s Free
+                <span>Start Learning Now — It&apos;s Free</span>
+                <svg className="w-4 h-4 group-hover:translate-x-1 transition-transform fill-none stroke-current stroke-2" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
+                </svg>
               </Link>
               <button
                 onClick={() => {

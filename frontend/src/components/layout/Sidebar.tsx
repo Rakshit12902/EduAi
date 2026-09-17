@@ -221,19 +221,17 @@ export function Sidebar() {
                       }
                     : {}
                 }
-                className={`flex items-center justify-between text-xs font-semibold transition-all py-2 px-3 rounded-xl ${
+                className={`flex items-center gap-2 text-xs font-semibold transition-all py-2 px-3 rounded-xl ${
                   pathname === '/history'
                     ? 'font-bold border shadow-2xs'
                     : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-50 dark:hover:bg-slate-800/60 border border-transparent hover:border-slate-200/80 dark:hover:border-slate-800'
                 }`}
               >
-                <span className="flex items-center gap-2">
-                  <svg className="w-4 h-4 text-current shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  <span>All Past Sessions</span>
-                </span>
-                <span className="text-xs">→</span>
+                <svg className="w-4 h-4 text-current shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span>All Past Sessions</span>
+                <span className="text-xs opacity-50 ml-0.5">→</span>
               </Link>
             </div>
           )}

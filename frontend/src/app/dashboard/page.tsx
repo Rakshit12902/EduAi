@@ -295,7 +295,7 @@ export default function DashboardPage() {
         )}
 
         {/* Floating Chat Input Bar */}
-        <div className="w-full max-w-2xl sm:max-w-3xl bg-white dark:bg-slate-900 rounded-full shadow-[0_12px_35px_-6px_rgba(15,23,42,0.08),0_0_1px_1px_rgba(226,232,240,0.8)] dark:shadow-none border border-slate-200/90 dark:border-slate-800 px-4 sm:px-5 py-2 sm:py-2.5 flex items-center gap-3 focus-within:border-emerald-500 focus-within:ring-4 focus-within:ring-emerald-500/10 transition-all mb-4">
+        <div className="w-full max-w-2xl sm:max-w-3xl bg-white dark:bg-slate-900 rounded-full shadow-[0_12px_35px_-6px_rgba(15,23,42,0.08),0_0_1px_1px_rgba(226,232,240,0.8)] dark:shadow-none border border-slate-200/90 dark:border-slate-800 px-4 sm:px-5 py-2 sm:py-2.5 flex items-center gap-3 focus-within:border-emerald-500 focus-within:ring-4 focus-within:ring-emerald-500/10 transition-all mb-6 isolate z-10 relative">
           
           {/* Hidden Native File Input */}
           <input 
