@@ -9,6 +9,8 @@ import { supabase } from '@/lib/supabase'
 import { useTheme, AccentColor } from '@/components/theme/ThemeProvider'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { UserMenu } from '@/components/layout/UserMenu'
+import ModelSelector from '@/components/chat/ModelSelector'
+import { useSidebar } from '@/components/layout/SidebarContext'
 
 type Theme = 'light' | 'dark' | 'system'
 
@@ -24,6 +26,7 @@ type UserSettings = {
 
 export default function SettingsPage() {
   const router = useRouter()
+  const { toggleMobile } = useSidebar()
   const { theme, setTheme, accentColor, setAccentColor, resolvedTheme, activePalette } = useTheme()
   const queryClient = useQueryClient()
   const [selectedTheme, setSelectedTheme] = useState<Theme>(theme)
@@ -199,31 +202,44 @@ export default function SettingsPage() {
         </div>
 
         {/* Main Content Area */}
-        <div className="relative z-10 p-6 md:p-10 max-w-4xl mx-auto w-full space-y-6">
+        <div className="relative z-10 p-4 sm:p-6 md:p-10 max-w-4xl mx-auto w-full space-y-6">
           
           {/* Top Bar Header */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2">
-            <div>
-              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
-                Account &amp; Preference Settings
-              </h1>
-              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
-                Customize your interface theme, AI model, and application preferences.
-              </p>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={toggleMobile}
+                className="p-1.5 -ml-1 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 active:scale-95 transition-all md:hidden cursor-pointer shrink-0"
+                title="Open menu"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+                </svg>
+              </button>
+              <div>
+                <h1 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
+                  Account &amp; Preference Settings
+                </h1>
+                <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5 sm:mt-1">
+                  Customize your interface theme, AI model, and application preferences.
+                </p>
+              </div>
             </div>
 
             {/* Right Controls: Back to Dashboard + Notification Bell + User Profile */}
-            <div className="flex items-center gap-3 self-start sm:self-center shrink-0">
+            <div className="flex items-center gap-2 sm:gap-3 self-start sm:self-center shrink-0">
               
               {/* Back to Dashboard Button */}
               <Link
                 href="/dashboard"
-                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-[#eff6ff] dark:bg-slate-800/80 hover:bg-[#dbeafe] dark:hover:bg-slate-700 text-[#2563eb] dark:text-blue-400 text-xs font-semibold rounded-full border border-blue-100 dark:border-slate-700 transition-colors shadow-2xs"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#eff6ff] dark:bg-slate-800/80 hover:bg-[#dbeafe] dark:hover:bg-slate-700 text-[#2563eb] dark:text-blue-400 text-xs font-semibold rounded-full border border-blue-100 dark:border-slate-700 transition-colors shadow-2xs"
               >
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
                 </svg>
-                <span>Back to Dashboard</span>
+                <span className="hidden xs:inline">Back to Dashboard</span>
+                <span className="xs:hidden">Dashboard</span>
               </Link>
 
               <UserMenu userName={firstName} subtitle="Hello," />
@@ -490,29 +506,24 @@ export default function SettingsPage() {
               
               {/* LLM Engine Model */}
               <div>
-                <label className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
-                  LLM Engine Model
-                </label>
-                <div className="relative flex items-center bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl px-3.5 py-2.5 shadow-2xs focus-within:ring-2 focus-within:ring-emerald-500/20 transition-all">
-                  <svg className="w-4 h-4 text-slate-400 dark:text-slate-500 shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z" />
-                  </svg>
-                  <select
-                    value={llmModel}
-                    onChange={(e) => setLlmModel(e.target.value)}
-                    className="w-full bg-transparent ml-2.5 text-sm font-medium text-slate-800 dark:text-slate-100 focus:outline-none cursor-pointer pr-6 appearance-none"
-                  >
-                    <option value="openai/gpt-oss-120b" className="dark:bg-slate-800">GPT-OSS 120B (Recommended / High Intelligence)</option>
-                    <option value="openai/gpt-oss-20b" className="dark:bg-slate-800">GPT-OSS 20B (Ultra Fast / Lightweight)</option>
-                    <option value="qwen/qwen3.6-27b" className="dark:bg-slate-800">Qwen 3.6 27B (Reasoning & Multilingual)</option>
-                    <option value="qwen/qwen3.8-27b" className="dark:bg-slate-800">Qwen 3.8 27B (Advanced Reasoning & Code)</option>
-                    <option value="gemini-3.6-flash" className="dark:bg-slate-800">Gemini 3.6 Flash (Google GenAI)</option>
-                  </select>
-                  <svg className="w-4 h-4 text-slate-400 dark:text-slate-500 absolute right-3.5 pointer-events-none" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
-                  </svg>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                    Default LLM Model
+                  </label>
+                  <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1">
+                    <span>✦</span> Also available directly in Chat
+                  </span>
+                </div>
+                
+                <div className="pt-0.5">
+                  <ModelSelector
+                    selectedModel={llmModel}
+                    onSelectModel={(newModel) => setLlmModel(newModel)}
+                    dropDirection="down"
+                  />
                 </div>
               </div>
+
 
               {/* Temperature Slider */}
               <div>

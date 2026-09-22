@@ -22,6 +22,7 @@ class MessageBase(BaseModel):
 class MessageCreate(BaseModel):
     role: MessageRole
     content: str = Field(..., min_length=1, max_length=32000)
+    model: Optional[str] = None
 
 class MessageResponse(MessageBase):
     id: UUID

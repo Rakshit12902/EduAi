@@ -8,6 +8,7 @@ import axios from 'axios'
 import { supabase } from '@/lib/supabase'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { UserMenu } from '@/components/layout/UserMenu'
+import { useSidebar } from '@/components/layout/SidebarContext'
 
 type Chat = {
   id: string
@@ -77,6 +78,7 @@ function formatRelativeDate(dateString?: string | null) {
 export default function HistoryPage() {
   const router = useRouter()
   const queryClient = useQueryClient()
+  const { toggleMobile } = useSidebar()
 
   const [searchQuery, setSearchQuery] = useState('')
   const [timeFilter, setTimeFilter] = useState<'all' | 'today' | '7days' | '30days'>('all')
@@ -275,22 +277,34 @@ export default function HistoryPage() {
         </div>
 
         {/* Content Container */}
-        <div className="relative z-10 p-6 md:p-10 max-w-5xl mx-auto w-full space-y-6">
+        <div className="relative z-10 p-4 sm:p-6 md:p-10 max-w-5xl mx-auto w-full space-y-6">
 
           {/* Top Bar Header */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2">
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
-                  Study History &amp; Past Sessions
-                </h1>
-                <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 dark:bg-emerald-950/70 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60">
-                  {totalSessions} {totalSessions === 1 ? 'Session' : 'Sessions'}
-                </span>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={toggleMobile}
+                className="p-1.5 -ml-1 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 active:scale-95 transition-all md:hidden cursor-pointer shrink-0"
+                title="Open menu"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+                </svg>
+              </button>
+              <div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h1 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
+                    Study History &amp; Past Sessions
+                  </h1>
+                  <span className="px-2.5 py-0.5 rounded-full text-[10px] sm:text-[11px] font-bold bg-emerald-100 dark:bg-emerald-950/70 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60">
+                    {totalSessions} {totalSessions === 1 ? 'Session' : 'Sessions'}
+                  </span>
+                </div>
+                <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5 sm:mt-1">
+                  Review, search, and resume your academic conversations and research notes.
+                </p>
               </div>
-              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
-                Review, search, and resume your academic conversations and research notes.
-              </p>
             </div>
 
             {/* Right Controls: New Session Button + Back to Dashboard + Notification + Profile */}

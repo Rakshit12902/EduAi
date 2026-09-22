@@ -107,7 +107,8 @@ async def generate_chat_stream(
     chat_id: str,
     user_id: str,
     query: str,
-    history: List[Dict[str, str]]
+    history: List[Dict[str, str]],
+    model_override: Optional[str] = None
 ):
     """Generator for StreamingResponse."""
     
@@ -160,6 +161,20 @@ async def generate_chat_stream(
                 if u_settings.language:
                     user_lang = u_settings.language.value if hasattr(u_settings.language, 'value') else str(u_settings.language)
 
+        # If a model override is sent from the chat interface, use it and update user preference
+        if model_override and str(model_override).strip():
+            user_model = str(model_override).strip()
+            try:
+                async with db_session_factory() as db_update:
+                    s_res = await db_update.execute(select(UserSettings).where(UserSettings.user_id == user_id))
+                    u_set = s_res.scalars().first()
+                    if u_set:
+                        u_set.llm_model = user_model
+                        await db_update.commit()
+            except Exception as set_err:
+                import logging
+                logging.getLogger(__name__).warning(f"Could not persist user model selection: {set_err}")
+
         # Allowlist of valid Groq model identifiers on this environment
         ALLOWED_GROQ_MODELS = {
             "openai/gpt-oss-120b",
@@ -172,12 +187,17 @@ async def generate_chat_stream(
             # Active native Groq models
             "openai/gpt-oss-120b": "openai/gpt-oss-120b",
             "openai/gpt-oss-20b": "openai/gpt-oss-20b",
-            "qwen/qwen3.6-27b": "qwen/qwen3.6-27b",
+            "qwen/qwen3.6-27b": "qwen/qwen3.8-27b",
             "qwen/qwen3.8-27b": "qwen/qwen3.8-27b",
+            "gpt-oss-120b": "openai/gpt-oss-120b",
+            "gpt-oss-20b": "openai/gpt-oss-20b",
+            "qwen3.8-27b": "qwen/qwen3.8-27b",
+            "claude-sonnet-4.6": "openai/gpt-oss-120b",
+            "claude-opus-4.6": "openai/gpt-oss-120b",
             # Legacy aliases
             "llama-3.3-70b-versatile": "openai/gpt-oss-120b",
             "llama-3.1-8b-instant": "openai/gpt-oss-20b",
-            "deepseek-r1-distill-llama-70b": "qwen/qwen3.6-27b",
+            "deepseek-r1-distill-llama-70b": "qwen/qwen3.8-27b",
             "gemma2-9b-it": "openai/gpt-oss-20b",
             "gemma-2-9b-it": "openai/gpt-oss-20b",
         }
@@ -192,7 +212,8 @@ async def generate_chat_stream(
         messages = build_prompt(query=query, context_chunks=prompt_chunks, history=history, language=user_lang)
 
         # 3. Stream from selected provider (Gemini or Groq)
-        if user_model == "gemini-3.6-flash":
+        is_gemini_family = user_model.lower().startswith("gemini")
+        if is_gemini_family:
             try:
                 from google import genai
                 gemini_client = genai.Client(api_key=settings.GEMINI_API_KEY)
@@ -238,6 +259,7 @@ async def generate_chat_stream(
                     model='gemini-3.6-flash',
                     contents=gemini_prompt
                 )
+
 
         full_response = ""
         think_filter = ThinkFilter()
@@ -416,7 +438,8 @@ async def stream_chat(
             chat_id=chat_id,
             user_id=current_user.id,
             query=message_in.content,
-            history=history
+            history=history,
+            model_override=message_in.model
         ),
         media_type="text/event-stream",
         headers={

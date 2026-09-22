@@ -1,18 +1,22 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import axios from 'axios'
 import { supabase } from '@/lib/supabase'
+import ModelSelector from '@/components/chat/ModelSelector'
 
 interface ChatInputProps {
   chatId: string
   onUploadSuccess?: () => void
-  onSendMessage?: (query: string, documentIds: string[]) => void
+  onSendMessage?: (query: string, documentIds: string[], model?: string) => void
   disabled?: boolean
+  initialModel?: string
+  onModelChange?: (model: string) => void
 }
 
-export default function ChatInput({ chatId, onUploadSuccess, onSendMessage, disabled }: ChatInputProps) {
+export default function ChatInput({ chatId, onUploadSuccess, onSendMessage, disabled, initialModel, onModelChange }: ChatInputProps) {
   const [query, setQuery] = useState('')
+  const [selectedModel, setSelectedModel] = useState(initialModel || 'gemini-3.8-flash')
   const [isUploading, setIsUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
   const [error, setError] = useState<string | null>(null)
@@ -69,13 +73,24 @@ export default function ChatInput({ chatId, onUploadSuccess, onSendMessage, disa
     if (fileInputRef.current) fileInputRef.current.value = ''
   }
 
+  useEffect(() => {
+    if (initialModel) {
+      setSelectedModel(initialModel)
+    }
+  }, [initialModel])
+
+  const handleModelChange = (newModel: string) => {
+    setSelectedModel(newModel)
+    if (onModelChange) onModelChange(newModel)
+  }
+
   const handleSend = (textToSend?: string) => {
     const effectiveText = (textToSend || query).trim()
     if (!effectiveText && uploadedFiles.length === 0) return  // Don't send empty
     if (disabled || isUploading) return
 
     if (onSendMessage) {
-      onSendMessage(effectiveText || `Analyze uploaded documents`, uploadedFiles.map(f => f.id))
+      onSendMessage(effectiveText || `Analyze uploaded documents`, uploadedFiles.map(f => f.id), selectedModel)
     }
     setQuery('')
     setUploadedFiles([]) // Clear attachments after sending
@@ -192,7 +207,7 @@ export default function ChatInput({ chatId, onUploadSuccess, onSendMessage, disa
       )}
 
       {/* Floating White Pill Input Container */}
-      <div className="relative flex items-center bg-white dark:bg-slate-900 rounded-full p-2 pl-3.5 shadow-lg shadow-slate-200/60 dark:shadow-black/40 border border-slate-200/90 dark:border-slate-800 focus-within:border-emerald-500 dark:focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-500/20 transition-all">
+      <div className="relative flex items-center bg-white dark:bg-slate-900 rounded-full p-1.5 sm:p-2 pl-2.5 sm:pl-3.5 shadow-lg shadow-slate-200/60 dark:shadow-black/40 border border-slate-200/90 dark:border-slate-800 focus-within:border-emerald-500 dark:focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-500/20 transition-all gap-1 sm:gap-2">
         {/* Hidden File Input */}
         <input 
           type="file" 
@@ -207,10 +222,10 @@ export default function ChatInput({ chatId, onUploadSuccess, onSendMessage, disa
           type="button"
           onClick={() => fileInputRef.current?.click()}
           disabled={isUploading}
-          className="shrink-0 w-8 h-8 flex items-center justify-center rounded-full text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors disabled:opacity-50 cursor-pointer active:scale-95"
+          className="shrink-0 w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center rounded-full text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors disabled:opacity-50 cursor-pointer active:scale-95"
           title="Attach Document"
         >
-          <svg className="w-5 h-5 -rotate-45" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+          <svg className="w-4 h-4 sm:w-5 sm:h-5 -rotate-45" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" d="M18.375 12.739l-7.693 7.693a4.5 4.5 0 01-6.364-6.364l10.94-10.94A3 3 0 1119.5 7.373L8.557 18.315a1.5 1.5 0 11-2.121-2.121l9.818-9.818" />
           </svg>
         </button>
@@ -223,44 +238,32 @@ export default function ChatInput({ chatId, onUploadSuccess, onSendMessage, disa
           onKeyDown={(e) => e.key === 'Enter' && handleSend()}
           placeholder="Ask anything about your documents..."
           disabled={disabled}
-          className="flex-1 bg-transparent px-3 text-sm text-slate-800 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none disabled:opacity-50"
+          className="flex-1 min-w-0 bg-transparent px-1.5 sm:px-3 text-xs sm:text-sm text-slate-800 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none disabled:opacity-50 font-sans"
         />
 
         {/* Right Tools: Model Selector Pill + Send Button */}
-        <div className="flex items-center gap-2 shrink-0 pr-1">
+        <div className="flex items-center gap-1 sm:gap-2 shrink-0 pr-0.5 sm:pr-1">
           {/* Model Selector Pill */}
-          <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#f0f4ff] dark:bg-slate-800 border border-indigo-100/90 dark:border-slate-700 text-[#4f46e5] dark:text-indigo-400 text-xs font-semibold select-none cursor-pointer hover:bg-[#e5ecff] dark:hover:bg-slate-750 transition-colors">
-            <span className="text-[#6366f1] dark:text-indigo-400 text-[11px]">✦</span>
-            <span>EduAI</span>
-            <svg className="w-3 h-3 text-[#4f46e5] dark:text-indigo-400 opacity-70" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
-            </svg>
-          </div>
+          <ModelSelector
+            selectedModel={selectedModel}
+            onSelectModel={handleModelChange}
+            dropDirection="up"
+          />
 
           {/* Send Button */}
           <button
             type="button"
             onClick={() => handleSend()}
             disabled={(!query.trim() && uploadedFiles.length === 0) || disabled || isUploading}
-            className="w-10 h-10 rounded-full bg-[#059669] hover:bg-[#047857] text-white flex items-center justify-center shadow-md shadow-emerald-600/20 active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+            className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-[#059669] hover:bg-[#047857] text-white flex items-center justify-center shadow-md shadow-emerald-600/20 active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shrink-0"
             title="Send message"
           >
-            <svg className="w-4 h-4 fill-current translate-x-0.5" viewBox="0 0 24 24">
+            <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 fill-current translate-x-0.5" viewBox="0 0 24 24">
               <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
             </svg>
           </button>
         </div>
       </div>
-
-      {/* Subtle Footer Quote */}
-      <div className="w-full flex items-center justify-center gap-3 pt-1 text-slate-400 select-none">
-        <span className="w-10 h-px bg-slate-200"></span>
-        <span className="text-[11px] italic font-normal text-slate-400/90 tracking-wide">
-          “A smarter you, for a brighter tomorrow.”
-        </span>
-        <span className="w-10 h-px bg-slate-200"></span>
-      </div>
-
     </div>
   )
 }

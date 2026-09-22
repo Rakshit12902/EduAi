@@ -9,6 +9,7 @@ import { supabase } from '@/lib/supabase'
 import ChatInput from '@/components/chat/ChatInput'
 import ChatMessage, { MessageSource } from '@/components/chat/ChatMessage'
 import { UserMenu } from '@/components/layout/UserMenu'
+import { useSidebar } from '@/components/layout/SidebarContext'
 
 type Chat = {
   id: string
@@ -31,16 +32,65 @@ export default function ChatPage({ params }: { params: Promise<{ id: string }> }
   const searchParams = useSearchParams()
   const router = useRouter()
   const queryClient = useQueryClient()
+  const { toggleMobile } = useSidebar()
 
   const [messages, setMessages] = useState<Message[]>([])
   const [isTyping, setIsTyping] = useState(false)
   const [userName, setUserName] = useState('Rakshit')
   const [isEditingTitle, setIsEditingTitle] = useState(false)
   const [titleInput, setTitleInput] = useState('')
+  const [activeModel, setActiveModel] = useState<string>('gemini-3.8-flash')
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const hasAutoSent = useRef(false)
   const isStreamingRef = useRef(false)
+
+  // Fetch user settings to synchronize model preference
+  const { data: settingsData } = useQuery({
+    queryKey: ['user_settings'],
+    queryFn: async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) return null
+      try {
+        const res = await axios.get(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/v1/settings/`, {
+          headers: { Authorization: `Bearer ${session.access_token}` }
+        })
+        return res.data
+      } catch (err) {
+        return null
+      }
+    }
+  })
+
+  useEffect(() => {
+    if (settingsData?.llm_model) {
+      setActiveModel(settingsData.llm_model)
+    }
+  }, [settingsData])
+
+  const updateModelMutation = useMutation({
+    mutationFn: async (newModel: string) => {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) return
+      try {
+        await axios.patch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/v1/settings/`, {
+          llm_model: newModel
+        }, {
+          headers: { Authorization: `Bearer ${session.access_token}` }
+        })
+      } catch (e) {
+        console.error('Failed to sync model to backend settings:', e)
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['user_settings'] })
+    }
+  })
+
+  const handleModelSelect = (newModel: string) => {
+    setActiveModel(newModel)
+    updateModelMutation.mutate(newModel)
+  }
 
   // Fetch current user details
   useEffect(() => {
@@ -133,9 +183,24 @@ export default function ChatPage({ params }: { params: Promise<{ id: string }> }
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
-  const handleSendMessage = useCallback(async (query: string, documentIds: string[], replaceUrl?: string) => {
+  const handleSendMessage = useCallback(async (
+    query: string, 
+    documentIds: string[], 
+    modelOrReplaceUrl?: string,
+    optionalReplaceUrl?: string
+  ) => {
     const { data: { session } } = await supabase.auth.getSession()
     if (!session) return
+
+    let modelToUse = activeModel || 'gemini-3.8-flash'
+    let replaceUrl = optionalReplaceUrl
+    if (modelOrReplaceUrl) {
+      if (modelOrReplaceUrl.startsWith('/')) {
+        replaceUrl = modelOrReplaceUrl
+      } else {
+        modelToUse = modelOrReplaceUrl
+      }
+    }
 
     const tempUserId = Date.now().toString()
     setMessages(prev => [...prev, { id: tempUserId, role: 'user', content: query }])
@@ -156,8 +221,9 @@ export default function ChatPage({ params }: { params: Promise<{ id: string }> }
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${session.access_token}`
         },
-        body: JSON.stringify({ role: 'user', content: query })
+        body: JSON.stringify({ role: 'user', content: query, model: modelToUse })
       })
+
 
       if (!response.ok) {
         const errorText = await response.text()
@@ -239,11 +305,12 @@ export default function ChatPage({ params }: { params: Promise<{ id: string }> }
     for (let i = assistantIndex - 1; i >= 0; i--) {
       if (messages[i].role === 'user') {
         const queryText = messages[i].content
-        handleSendMessage(queryText, [])
+        handleSendMessage(queryText, [], activeModel)
         break
       }
     }
-  }, [messages, isTyping, handleSendMessage])
+  }, [messages, isTyping, handleSendMessage, activeModel])
+
 
   // Auto-send initial query from dashboard navigation (?q=...)
   useEffect(() => {
@@ -258,43 +325,56 @@ export default function ChatPage({ params }: { params: Promise<{ id: string }> }
     <div className="flex-1 flex flex-col h-full bg-gradient-to-br from-[#edf4fe] via-[#f2f6fe] to-[#f8faff] dark:from-slate-950 dark:via-[#090d16] dark:to-slate-950 relative overflow-hidden selection:bg-emerald-500 selection:text-white">
       
       {/* Top Bar Header */}
-      <header className="h-16 px-6 border-b border-slate-200/80 dark:border-slate-800/80 bg-white/70 dark:bg-slate-900/80 backdrop-blur-md flex items-center justify-between z-20 shrink-0 select-none">
-        {/* Left: Chat Title & Subtitle */}
-        <div className="flex flex-col">
-          <div className="flex items-center gap-2">
-            {isEditingTitle ? (
-              <input
-                type="text"
-                value={titleInput}
-                onChange={(e) => setTitleInput(e.target.value)}
-                onBlur={handleTitleSubmit}
-                onKeyDown={(e) => e.key === 'Enter' && handleTitleSubmit()}
-                autoFocus
-                className="font-bold text-sm sm:text-base text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-800 border border-emerald-500 rounded-md px-2 py-0.5 outline-none"
-              />
-            ) : (
-              <h1 className="font-bold text-sm sm:text-base text-slate-900 dark:text-slate-100 truncate max-w-xs sm:max-w-md">
-                {chat ? chat.title : 'New Chat'}
-              </h1>
-            )}
+      <header className="h-14 sm:h-16 px-3.5 sm:px-6 border-b border-slate-200/80 dark:border-slate-800/80 bg-white/70 dark:bg-slate-900/80 backdrop-blur-md flex items-center justify-between z-20 shrink-0 select-none gap-2">
+        {/* Left: Hamburger (mobile) + Chat Title & Subtitle */}
+        <div className="flex items-center gap-2.5 min-w-0 flex-1">
+          <button
+            type="button"
+            onClick={toggleMobile}
+            className="p-1.5 -ml-1 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 active:scale-95 transition-all md:hidden cursor-pointer shrink-0"
+            title="Open menu"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+            </svg>
+          </button>
+          
+          <div className="flex flex-col min-w-0 flex-1">
+            <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+              {isEditingTitle ? (
+                <input
+                  type="text"
+                  value={titleInput}
+                  onChange={(e) => setTitleInput(e.target.value)}
+                  onBlur={handleTitleSubmit}
+                  onKeyDown={(e) => e.key === 'Enter' && handleTitleSubmit()}
+                  autoFocus
+                  className="font-bold text-xs sm:text-base text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-800 border border-emerald-500 rounded-md px-2 py-0.5 outline-none max-w-full"
+                />
+              ) : (
+                <h1 className="font-bold text-xs sm:text-base text-slate-900 dark:text-slate-100 truncate max-w-[140px] xs:max-w-[200px] sm:max-w-md">
+                  {chat ? chat.title : 'New Chat'}
+                </h1>
+              )}
 
-            <button
-              onClick={() => setIsEditingTitle(!isEditingTitle)}
-              className="text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 p-1 rounded-md transition-colors cursor-pointer"
-              title="Edit chat title"
-            >
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
-              </svg>
-            </button>
+              <button
+                onClick={() => setIsEditingTitle(!isEditingTitle)}
+                className="text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 p-0.5 sm:p-1 rounded-md transition-colors cursor-pointer shrink-0"
+                title="Edit chat title"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
+                </svg>
+              </button>
+            </div>
+            <span className="text-[10px] sm:text-[11px] text-slate-400 dark:text-slate-500 font-medium leading-none mt-0.5">
+              Auto-generated chat
+            </span>
           </div>
-          <span className="text-[11px] text-slate-400 dark:text-slate-500 font-medium leading-none mt-0.5">
-            Auto-generated chat
-          </span>
         </div>
 
         {/* Right: User Profile Menu */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
           <UserMenu userName={userName} subtitle="Hello," />
         </div>
       </header>
@@ -365,7 +445,14 @@ export default function ChatPage({ params }: { params: Promise<{ id: string }> }
 
       {/* Input Area */}
       <div className="w-full pb-2 pt-1 shrink-0 z-20 relative bg-gradient-to-t from-[#edf4fe] dark:from-slate-950 via-[#edf4fe]/90 dark:via-slate-950/90 to-transparent">
-        <ChatInput chatId={id} onSendMessage={handleSendMessage} disabled={isTyping} />
+        <ChatInput 
+          chatId={id} 
+          onSendMessage={(q, docs, model) => handleSendMessage(q, docs, model)} 
+          disabled={isTyping} 
+          initialModel={activeModel}
+          onModelChange={handleModelSelect}
+        />
+
         {/* Footer Tagline (from reference 06_42_30 PM) */}
         <div className="flex items-center justify-center gap-2 mt-1.5 text-[11px] text-slate-400 dark:text-slate-500 font-normal italic select-none">
           <span className="w-6 h-[1px] bg-slate-300 dark:bg-slate-800" />

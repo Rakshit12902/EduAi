@@ -133,36 +133,36 @@ export default function ChatMessage({
         
         {/* Avatar */}
         {isUser ? (
-          <div className="w-9 h-9 shrink-0 rounded-full bg-[#059669] text-white flex items-center justify-center font-bold shadow-xs">
-            <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
+          <div className="w-7 h-7 sm:w-9 sm:h-9 shrink-0 rounded-full bg-[#059669] text-white flex items-center justify-center font-bold shadow-xs text-xs sm:text-sm">
+            <svg className="w-4 h-4 sm:w-5 sm:h-5 fill-current" viewBox="0 0 24 24">
               <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
             </svg>
           </div>
         ) : (
-          <div className="w-9 h-9 shrink-0 rounded-full bg-gradient-to-tr from-[#3b82f6] to-[#60a5fa] text-white flex items-center justify-center font-bold shadow-xs">
-            <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
+          <div className="w-7 h-7 sm:w-9 sm:h-9 shrink-0 rounded-full bg-gradient-to-tr from-[#3b82f6] to-[#60a5fa] text-white flex items-center justify-center font-bold shadow-xs text-xs sm:text-sm">
+            <svg className="w-4 h-4 sm:w-5 sm:h-5 fill-current" viewBox="0 0 24 24">
               <path d="M19 9l1.25-2.75L23 5l-2.75-1.25L19 1l-1.25 2.75L15 5l2.75 1.25L19 9zm-7.5.5L9 4 6.5 9.5 1 12l5.5 2.5L9 20l2.5-5.5L17 12l-5.5-2.5zM19 15l-1.25 2.75L15 19l2.75 1.25L19 23l1.25-2.75L23 19l-2.75-1.25L19 15z" />
             </svg>
           </div>
         )}
 
         {/* Bubble & Content */}
-        <div className="flex flex-col gap-1.5 min-w-[200px] flex-1">
+        <div className="flex flex-col gap-1.5 min-w-0 flex-1 overflow-hidden">
           
           {/* User Message */}
           {isUser ? (
             <div className="flex flex-col items-end">
-              <div className="bg-[#d1fae5] dark:bg-emerald-950/80 text-slate-900 dark:text-emerald-100 font-medium px-4 py-2.5 rounded-2xl rounded-tr-xs shadow-2xs text-sm leading-relaxed self-end border border-transparent dark:border-emerald-800/60">
+              <div className="bg-[#d1fae5] dark:bg-emerald-950/80 text-slate-900 dark:text-emerald-100 font-medium px-3 sm:px-4 py-2 sm:py-2.5 rounded-2xl rounded-tr-xs shadow-2xs text-xs sm:text-sm leading-relaxed self-end border border-transparent dark:border-emerald-800/60 break-words max-w-full">
                 {cleanedContent}
               </div>
-              <div className="flex items-center gap-1.5 mt-1 mr-1 text-slate-400 dark:text-slate-500 text-[11px] font-medium select-none">
+              <div className="flex items-center gap-1.5 mt-1 mr-1 text-slate-400 dark:text-slate-500 text-[10px] sm:text-[11px] font-medium select-none">
                 <span>Just now</span>
                 <span className="text-[#0ea5e9] font-bold tracking-tighter">✓✓</span>
               </div>
             </div>
           ) : (
             /* Assistant Message Card */
-            <div className="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-100 dark:border-slate-800 shadow-2xs text-slate-800 dark:text-slate-200 text-sm leading-relaxed self-start w-full">
+            <div className="bg-white dark:bg-slate-900 rounded-2xl p-3.5 sm:p-5 border border-slate-100 dark:border-slate-800 shadow-2xs text-slate-800 dark:text-slate-200 text-xs sm:text-sm leading-relaxed self-start w-full overflow-hidden break-words">
               
               {/* Answer Type Badge */}
               {content && (
