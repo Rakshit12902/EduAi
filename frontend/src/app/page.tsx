@@ -12,35 +12,8 @@ export default function LandingPage({ initialSection }: LandingPageProps = {}) {
   const [videoModalOpen, setVideoModalOpen] = useState(false)
   const [openFaq, setOpenFaq] = useState<number | null>(null)
   const [selectedFeatureCategory, setSelectedFeatureCategory] = useState<'all' | 'rag' | 'workspaces' | 'ai' | 'security'>('all')
-  const [activeModalMember, setActiveModalMember] = useState<'rakshit' | 'aashika' | null>(null)
-  const [isModalClosing, setIsModalClosing] = useState(false)
-
-  const openTeamModal = (id: 'rakshit' | 'aashika') => {
-    setIsModalClosing(false)
-    setActiveModalMember(id)
-  }
-
-  const closeTeamModal = () => {
-    if (isModalClosing || !activeModalMember) return
-    setIsModalClosing(true)
-    setTimeout(() => {
-      setActiveModalMember(null)
-      setIsModalClosing(false)
-    }, 220)
-  }
-
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && activeModalMember && !isModalClosing) {
-        closeTeamModal()
-      }
-    }
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [activeModalMember, isModalClosing])
-
-  useEffect(() => {
-    if (activeModalMember || videoModalOpen) {
+    if (videoModalOpen) {
       document.body.style.overflow = 'hidden'
     } else {
       document.body.style.overflow = ''
@@ -48,30 +21,7 @@ export default function LandingPage({ initialSection }: LandingPageProps = {}) {
     return () => {
       document.body.style.overflow = ''
     }
-  }, [activeModalMember, videoModalOpen])
-
-  const teamData = {
-    rakshit: {
-      name: 'Rakshit Katiyar',
-      role: 'Project Lead & AI Engineer',
-      image: '/images/team-rakshit.png',
-      bio: "Passionate about AI, data, and building intelligent solutions that make learning simpler and more accessible.",
-      fullBio: "AI engineer and system architect with a focus on building scalable, intelligent solutions for education. Experienced in designing RAG systems, vector databases, and multi-LLM architectures to enhance learning experiences.",
-      tags: ['AI & Deep Learning', 'System Architecture', 'EdTech Innovation'],
-      linkedin: 'https://www.linkedin.com/in/rakshit-katiyar-7738432a9/',
-      email: 'rakshitkatiyar9@gmail.com'
-    },
-    aashika: {
-      name: 'Aashika Kumari',
-      role: 'Product & UX Lead',
-      image: '/images/team-aashika.png',
-      bio: 'Passionate about transforming ideas into simple, intuitive experiences that make learning more engaging and accessible.',
-      fullBio: 'Building learner-first experiences that make technology easier to use and learning more engaging. Focused on creating thoughtful, accessible, and human-centered experiences through EduAI.',
-      tags: ['Product Strategy', 'UI/UX Design', 'Learner Experience'],
-      linkedin: 'https://www.linkedin.com/in/aashika-kumari-999b222a9/',
-      email: 'aashikasharma919@gmail.com'
-    }
-  }
+  }, [videoModalOpen])
 
   const navItems = ['Home', 'Features', 'How It Works', 'Use Cases', 'FAQ', 'About']
 
@@ -1542,174 +1492,7 @@ export default function LandingPage({ initialSection }: LandingPageProps = {}) {
             </div>
           </div>
 
-          {/* MEET THE TEAM SECTION */}
-          <div id="team" className="pt-16 border-t border-slate-200/60 space-y-10 scroll-mt-24">
-            
-            {/* Header: Title + Subtitle with Divider */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-2">
-              <div className="shrink-0">
-                <h3 className="text-3xl sm:text-4xl font-headline-lg font-extrabold text-slate-900 tracking-tight">
-                  Meet the Team
-                </h3>
-              </div>
-              <div className="md:border-l-2 md:border-slate-200/80 md:pl-6 max-w-xl">
-                <p className="text-sm sm:text-base text-slate-600 leading-relaxed font-normal">
-                  We are a group of passionate builders, designers, and education enthusiasts working together to make learning accessible to everyone.
-                </p>
-              </div>
-            </div>
 
-            {/* Team Cards Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              
-              {/* Member 1: Rakshit Katiyar */}
-              <div 
-                onClick={() => openTeamModal('rakshit')}
-                className="bg-white/90 backdrop-blur-md rounded-[28px] p-6 sm:p-7 border border-slate-200/80 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] hover:shadow-[0_20px_40px_-8px_rgba(79,70,229,0.15)] hover:border-indigo-300 hover:-translate-y-1.5 active:scale-[0.99] transition-all duration-300 ease-out flex flex-col justify-between group cursor-pointer relative overflow-hidden"
-              >
-                {/* Subtle Ambient Hover Glow */}
-                <div className="absolute -top-16 -right-16 w-40 h-40 bg-gradient-to-br from-indigo-100/50 to-purple-100/40 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-500 pointer-events-none" />
-
-                <div className="flex items-start gap-5 relative z-10">
-                  <div className="w-20 h-20 sm:w-22 sm:h-22 rounded-2xl ring-4 ring-white shadow-md overflow-hidden shrink-0 group-hover:scale-105 group-hover:shadow-lg transition-all duration-300 bg-slate-100 border border-slate-200/60">
-                    <img
-                      src="/images/team-rakshit.png"
-                      alt="Rakshit Katiyar"
-                      className="w-full h-full object-cover object-top"
-                    />
-                  </div>
-                  <div className="space-y-2 flex-1 min-w-0">
-                    <h4 className="text-xl sm:text-2xl font-headline-lg font-bold text-slate-900 group-hover:text-indigo-600 transition-colors tracking-tight truncate">
-                      Rakshit Katiyar
-                    </h4>
-                    <div>
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-50 text-indigo-600 border border-indigo-100">
-                        Founder & CEO
-                      </span>
-                    </div>
-                    <p className="text-xs sm:text-sm text-slate-500 leading-relaxed font-normal pt-0.5 line-clamp-2">
-                      Passionate about AI, data, and building solutions that make a real impact in people&apos;s lives.
-                    </p>
-                    <div className="flex flex-wrap items-center gap-1.5 pt-1.5">
-                      {teamData.rakshit.tags.map((tag) => (
-                        <span key={tag} className="text-[10px] font-semibold text-slate-500 bg-slate-50 px-2 py-0.5 rounded-md border border-slate-200/60">
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Card Footer: View profile link + Direct Actions */}
-                <div className="flex items-center justify-between gap-3 pt-4 mt-5 border-t border-slate-100 relative z-10">
-                  <span className="text-xs text-slate-400 group-hover:text-indigo-600 font-medium transition-colors flex items-center gap-1">
-                    View profile <span className="transition-transform group-hover:translate-x-1">→</span>
-                  </span>
-
-                  <div className="flex items-center gap-2 shrink-0">
-                    <a
-                      href={teamData.rakshit.linkedin}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      onClick={(e) => e.stopPropagation()}
-                      className="w-8 h-8 rounded-full bg-white hover:bg-[#0A66C2] text-slate-600 hover:text-white border border-slate-300 flex items-center justify-center transition-all duration-200 shadow-2xs hover:scale-110 active:scale-95"
-                      aria-label="Rakshit Katiyar LinkedIn"
-                      title="Connect on LinkedIn"
-                    >
-                      <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
-                        <path d="M19 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14m-.5 15.5v-5.3a3.26 3.26 0 0 0-3.26-3.26c-.85 0-1.84.52-2.28 1.3v-1.11h-2.79v8.37h2.79v-4.93c0-.77.62-1.4 1.39-1.4a1.4 1.4 0 0 1 1.4 1.4v4.93h2.75M6.46 10.9v8.37H9.2V10.9H6.46M7.83 6.6a1.6 1.6 0 0 0-1.6 1.6 1.6 1.6 0 0 0 1.6 1.6 1.6 1.6 0 0 0 1.6-1.6 1.6 1.6 0 0 0-1.6-1.6Z" />
-                      </svg>
-                    </a>
-                    <a
-                      href={`mailto:${teamData.rakshit.email}`}
-                      onClick={(e) => e.stopPropagation()}
-                      className="w-8 h-8 rounded-full bg-white hover:bg-indigo-600 text-slate-600 hover:text-white border border-slate-300 flex items-center justify-center transition-all duration-200 shadow-2xs hover:scale-110 active:scale-95"
-                      aria-label="Email Rakshit Katiyar"
-                      title="Send email to Rakshit"
-                    >
-                      <svg className="w-3.5 h-3.5 fill-none stroke-current stroke-2" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75" />
-                      </svg>
-                    </a>
-                  </div>
-                </div>
-              </div>
-
-              {/* Member 2: Aashika Kumari */}
-              <div 
-                onClick={() => openTeamModal('aashika')}
-                className="bg-white/90 backdrop-blur-md rounded-[28px] p-6 sm:p-7 border border-slate-200/80 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] hover:shadow-[0_20px_40px_-8px_rgba(79,70,229,0.15)] hover:border-indigo-300 hover:-translate-y-1.5 active:scale-[0.99] transition-all duration-300 ease-out flex flex-col justify-between group cursor-pointer relative overflow-hidden"
-              >
-                {/* Subtle Ambient Hover Glow */}
-                <div className="absolute -top-16 -right-16 w-40 h-40 bg-gradient-to-br from-indigo-100/50 to-purple-100/40 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-500 pointer-events-none" />
-
-                <div className="flex items-start gap-5 relative z-10">
-                  <div className="w-20 h-20 sm:w-22 sm:h-22 rounded-2xl ring-4 ring-white shadow-md overflow-hidden shrink-0 group-hover:scale-105 group-hover:shadow-lg transition-all duration-300 bg-slate-100 border border-slate-200/60">
-                    <img
-                      src="/images/team-aashika.png"
-                      alt="Aashika Kumari"
-                      className="w-full h-full object-cover object-top"
-                    />
-                  </div>
-                  <div className="space-y-2 flex-1 min-w-0">
-                    <h4 className="text-xl sm:text-2xl font-headline-lg font-bold text-slate-900 group-hover:text-indigo-600 transition-colors tracking-tight truncate">
-                      Aashika Kumari
-                    </h4>
-                    <div>
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-50 text-indigo-600 border border-indigo-100">
-                        Co-Founder & Product
-                      </span>
-                    </div>
-                    <p className="text-xs sm:text-sm text-slate-500 leading-relaxed font-normal pt-0.5 line-clamp-2">
-                      Focused on creating user-centric experiences that make learning simple and accessible.
-                    </p>
-                    <div className="flex flex-wrap items-center gap-1.5 pt-1.5">
-                      {teamData.aashika.tags.map((tag) => (
-                        <span key={tag} className="text-[10px] font-semibold text-slate-500 bg-slate-50 px-2 py-0.5 rounded-md border border-slate-200/60">
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Card Footer: View profile link + Direct Actions */}
-                <div className="flex items-center justify-between gap-3 pt-4 mt-5 border-t border-slate-100 relative z-10">
-                  <span className="text-xs text-slate-400 group-hover:text-indigo-600 font-medium transition-colors flex items-center gap-1">
-                    View profile <span className="transition-transform group-hover:translate-x-1">→</span>
-                  </span>
-
-                  <div className="flex items-center gap-2 shrink-0">
-                    <a
-                      href={teamData.aashika.linkedin}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      onClick={(e) => e.stopPropagation()}
-                      className="w-8 h-8 rounded-full bg-white hover:bg-[#0A66C2] text-slate-600 hover:text-white border border-slate-300 flex items-center justify-center transition-all duration-200 shadow-2xs hover:scale-110 active:scale-95"
-                      aria-label="Aashika Kumari LinkedIn"
-                      title="Connect on LinkedIn"
-                    >
-                      <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
-                        <path d="M19 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14m-.5 15.5v-5.3a3.26 3.26 0 0 0-3.26-3.26c-.85 0-1.84.52-2.28 1.3v-1.11h-2.79v8.37h2.79v-4.93c0-.77.62-1.4 1.39-1.4a1.4 1.4 0 0 1 1.4 1.4v4.93h2.75M6.46 10.9v8.37H9.2V10.9H6.46M7.83 6.6a1.6 1.6 0 0 0-1.6 1.6 1.6 1.6 0 0 0 1.6 1.6 1.6 1.6 0 0 0 1.6-1.6 1.6 1.6 0 0 0-1.6-1.6Z" />
-                      </svg>
-                    </a>
-                    <a
-                      href={`mailto:${teamData.aashika.email}`}
-                      onClick={(e) => e.stopPropagation()}
-                      className="w-8 h-8 rounded-full bg-white hover:bg-indigo-600 text-slate-600 hover:text-white border border-slate-300 flex items-center justify-center transition-all duration-200 shadow-2xs hover:scale-110 active:scale-95"
-                      aria-label="Email Aashika Kumari"
-                      title="Send email to Aashika"
-                    >
-                      <svg className="w-3.5 h-3.5 fill-none stroke-current stroke-2" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75" />
-                      </svg>
-                    </a>
-                  </div>
-                </div>
-              </div>
-
-            </div>
-          </div>
 
           {/* Bottom Journey Callout */}
           <div className="bg-gradient-to-r from-indigo-600 via-indigo-700 to-purple-700 rounded-3xl p-8 sm:p-14 text-white text-center space-y-5 shadow-2xl shadow-indigo-500/25">
@@ -1890,7 +1673,7 @@ export default function LandingPage({ initialSection }: LandingPageProps = {}) {
                 </li>
                 <li>
                   <button onClick={() => handleNavClick('About')} className="hover:text-indigo-600 transition-colors cursor-pointer text-left">
-                    Meet the Team
+                    About Us
                   </button>
                 </li>
                 <li>
@@ -1966,128 +1749,6 @@ export default function LandingPage({ initialSection }: LandingPageProps = {}) {
               >
                 Your browser does not support the video tag.
               </video>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* EXPANDED TEAM MEMBER SPOTLIGHT MODAL */}
-      {activeModalMember && (
-        <div 
-          onClick={closeTeamModal}
-          className={`fixed inset-0 z-[100] bg-slate-950/75 backdrop-blur-md flex items-center justify-center p-4 sm:p-6 cursor-zoom-out select-none overflow-y-auto ${
-            isModalClosing ? 'modal-backdrop-out' : 'modal-backdrop-in'
-          }`}
-        >
-          <div 
-            onClick={(e) => e.stopPropagation()} 
-            className={`bg-white rounded-3xl sm:rounded-[32px] p-6 sm:p-8 max-w-xl w-full border border-slate-100 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.4)] relative space-y-5 cursor-default my-auto max-h-[92vh] overflow-y-auto ${
-              isModalClosing ? 'modal-zoom-out' : 'modal-zoom-in'
-            }`}
-          >
-            {/* Soft Ambient Inner Glow */}
-            <div className="absolute -top-24 -right-24 w-60 h-60 bg-gradient-to-br from-indigo-200/40 via-purple-200/30 to-transparent rounded-full blur-3xl pointer-events-none" />
-
-            {/* Header: Badge & Close Button */}
-            <div className="flex items-center justify-between relative z-10">
-              <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-indigo-50 border border-indigo-100 text-indigo-700 text-xs font-extrabold tracking-wide shadow-2xs">
-                <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-600"></span>
-                </span>
-                Core Leadership Spotlight
-              </div>
-              <button
-                onClick={closeTeamModal}
-                className="w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-900 flex items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95 cursor-pointer text-sm font-bold shadow-2xs"
-                aria-label="Close modal"
-                title="Close (Esc)"
-              >
-                ✕
-              </button>
-            </div>
-
-            {/* Large Profile Header */}
-            <div className="flex flex-col sm:flex-row items-center sm:items-start gap-5 text-center sm:text-left relative z-10">
-              <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl ring-4 ring-indigo-50 shadow-xl overflow-hidden shrink-0 bg-slate-100 border border-slate-200/60">
-                <img
-                  src={teamData[activeModalMember].image}
-                  alt={teamData[activeModalMember].name}
-                  className="w-full h-full object-cover object-top"
-                />
-              </div>
-              <div className="space-y-1.5 flex-1 min-w-0">
-                <h3 className="text-2xl sm:text-3xl font-headline-lg font-black text-slate-900 tracking-tight">
-                  {teamData[activeModalMember].name}
-                </h3>
-                <div>
-                  <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-extrabold bg-indigo-50 text-indigo-600 border border-indigo-100 shadow-2xs">
-                    {teamData[activeModalMember].role}
-                  </span>
-                </div>
-                <p className="text-xs sm:text-sm text-slate-500 font-medium leading-relaxed pt-0.5">
-                  {teamData[activeModalMember].bio}
-                </p>
-              </div>
-            </div>
-
-            {/* Focus Areas / Expertise Tags */}
-            <div className="flex flex-wrap items-center gap-2 relative z-10 pt-1">
-              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Expertise:</span>
-              {teamData[activeModalMember].tags.map((tag) => (
-                <span key={tag} className="px-3 py-1 rounded-xl text-xs font-semibold bg-slate-100/90 text-slate-700 border border-slate-200/80 shadow-2xs">
-                  {tag}
-                </span>
-              ))}
-            </div>
-
-            {/* Extended Leadership Mission / Story */}
-            <div className="p-5 rounded-2xl bg-gradient-to-br from-slate-50 via-indigo-50/20 to-slate-50 border border-slate-200/80 text-xs sm:text-sm text-slate-700 leading-relaxed font-normal relative z-10 shadow-2xs space-y-2">
-              <div className="flex items-center gap-2 text-indigo-600 font-bold text-xs uppercase tracking-wider">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
-                </svg>
-                <span>Mission & Vision</span>
-              </div>
-              <p>{teamData[activeModalMember].fullBio}</p>
-            </div>
-
-            {/* Action Links */}
-            <div className="flex flex-wrap items-center gap-3 pt-1 relative z-10">
-              <a
-                href={teamData[activeModalMember].linkedin}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex-1 min-w-[150px] px-5 py-3 rounded-2xl bg-[#0A66C2] hover:bg-[#004182] text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md shadow-blue-500/20 hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200"
-              >
-                <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
-                  <path d="M19 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14m-.5 15.5v-5.3a3.26 3.26 0 0 0-3.26-3.26c-.85 0-1.84.52-2.28 1.3v-1.11h-2.79v8.37h2.79v-4.93c0-.77.62-1.4 1.39-1.4a1.4 1.4 0 0 1 1.4 1.4v4.93h2.75M6.46 10.9v8.37H9.2V10.9H6.46M7.83 6.6a1.6 1.6 0 0 0-1.6 1.6 1.6 1.6 0 0 0 1.6 1.6 1.6 1.6 0 0 0 1.6-1.6 1.6 1.6 0 0 0-1.6-1.6Z" />
-                </svg>
-                <span>LinkedIn Profile</span>
-              </a>
-
-              <a
-                href={`mailto:${teamData[activeModalMember].email}`}
-                className="flex-1 min-w-[150px] px-5 py-3 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md shadow-indigo-500/25 hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200"
-              >
-                <svg className="w-4 h-4 fill-none stroke-current stroke-2" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75" />
-                </svg>
-                <span>Send Email</span>
-              </a>
-            </div>
-
-            {/* Dismiss helper */}
-            <div className="text-center pt-1 relative z-10">
-              <button
-                onClick={closeTeamModal}
-                className="text-[11px] font-semibold text-slate-400 hover:text-slate-600 transition-colors cursor-pointer inline-flex items-center gap-1.5"
-              >
-                <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 9l-4 4m0 0l4 4m-4-4h14" />
-                </svg>
-                <span>Click anywhere outside or press Esc to zoom out</span>
-              </button>
             </div>
           </div>
         </div>
