@@ -219,7 +219,7 @@ export default function DashboardPage() {
     <div className="flex-1 flex flex-col h-full bg-[#f8fafc] dark:bg-[#070e18] relative overflow-y-auto selection:bg-emerald-500 selection:text-white transition-colors duration-300">
       
       {/* Top Header Bar */}
-      <div className="w-full px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between z-30 shrink-0">
+      <div className="w-full px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between z-30 shrink-0 sticky top-0 bg-[#f8fafc]/90 dark:bg-[#070e18]/90 backdrop-blur-md border-b border-slate-200/50 dark:border-slate-800/50 md:border-transparent md:bg-transparent md:backdrop-blur-none">
         {/* Mobile Hamburger Button + Logo (visible < md) */}
         <div className="flex items-center gap-2.5 md:hidden">
           <button

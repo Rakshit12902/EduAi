@@ -1,6 +1,7 @@
 'use client'
 
 import { use, useState, useEffect, useRef, useCallback } from 'react'
+import Link from 'next/link'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import axios from 'axios'
@@ -41,6 +42,7 @@ export default function ChatPage({ params }: { params: Promise<{ id: string }> }
   const [titleInput, setTitleInput] = useState('')
   const [activeModel, setActiveModel] = useState<string>('gemini-3.8-flash')
 
+  const messagesContainerRef = useRef<HTMLDivElement>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const hasAutoSent = useRef(false)
   const isStreamingRef = useRef(false)
@@ -178,10 +180,19 @@ export default function ChatPage({ params }: { params: Promise<{ id: string }> }
     fetchMessages()
   }, [id])
 
-  // Scroll to bottom
+  // Scroll messages container to bottom without scrolling window/ancestors
+  const scrollToBottom = useCallback((behavior: ScrollBehavior = 'smooth') => {
+    if (messagesContainerRef.current) {
+      messagesContainerRef.current.scrollTo({
+        top: messagesContainerRef.current.scrollHeight,
+        behavior
+      })
+    }
+  }, [])
+
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages])
+    scrollToBottom('smooth')
+  }, [messages, scrollToBottom])
 
   const handleSendMessage = useCallback(async (
     query: string, 
@@ -325,9 +336,9 @@ export default function ChatPage({ params }: { params: Promise<{ id: string }> }
     <div className="flex-1 flex flex-col h-full bg-gradient-to-br from-[#edf4fe] via-[#f2f6fe] to-[#f8faff] dark:from-slate-950 dark:via-[#090d16] dark:to-slate-950 relative overflow-hidden selection:bg-emerald-500 selection:text-white">
       
       {/* Top Bar Header */}
-      <header className="h-14 sm:h-16 px-3.5 sm:px-6 border-b border-slate-200/80 dark:border-slate-800/80 bg-white/70 dark:bg-slate-900/80 backdrop-blur-md flex items-center justify-between z-20 shrink-0 select-none gap-2">
-        {/* Left: Hamburger (mobile) + Chat Title & Subtitle */}
-        <div className="flex items-center gap-2.5 min-w-0 flex-1">
+      <header className="sticky top-0 z-30 h-14 sm:h-16 px-3.5 sm:px-6 border-b border-slate-200/80 dark:border-slate-800/80 bg-white/85 dark:bg-slate-900/85 backdrop-blur-md flex items-center justify-between shrink-0 select-none gap-2 shadow-2xs">
+        {/* Left: Hamburger (mobile) + Back to Dashboard (mobile) + Chat Title & Subtitle */}
+        <div className="flex items-center gap-1.5 sm:gap-2.5 min-w-0 flex-1">
           <button
             type="button"
             onClick={toggleMobile}
@@ -338,6 +349,16 @@ export default function ChatPage({ params }: { params: Promise<{ id: string }> }
               <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
             </svg>
           </button>
+
+          <Link
+            href="/dashboard"
+            className="p-1.5 rounded-xl text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 active:scale-95 transition-all md:hidden shrink-0"
+            title="Back to dashboard"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
+            </svg>
+          </Link>
           
           <div className="flex flex-col min-w-0 flex-1">
             <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
@@ -407,7 +428,10 @@ export default function ChatPage({ params }: { params: Promise<{ id: string }> }
       </div>
 
       {/* Main Content Area (Messages) */}
-      <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-6 flex flex-col z-10 relative custom-scroll">
+      <div 
+        ref={messagesContainerRef}
+        className="flex-1 overflow-y-auto px-4 sm:px-6 py-6 flex flex-col z-10 relative custom-scroll"
+      >
         {messages.length === 0 ? (
           <div className="flex-1 flex flex-col items-center justify-center text-center my-auto">
             <div className="w-16 h-16 rounded-3xl bg-emerald-500/10 dark:bg-emerald-950/40 text-[#059669] dark:text-emerald-400 flex items-center justify-center mb-3 shadow-2xs">
